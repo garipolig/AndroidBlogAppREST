@@ -21,7 +21,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".AuthorDetailsActivity"
+            android:name=".PostsActivity"
             android:label="@string/app_name"
             android:theme="@style/AppTheme.NoActionBar"
             android:parentActivityName=".MainActivity"
