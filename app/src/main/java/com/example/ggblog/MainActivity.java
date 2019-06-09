@@ -5,6 +5,7 @@ import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import android.content.Intent;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -41,6 +42,9 @@ import org.json.JSONObject;
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainBlogPage";
+
+    public static final String EXTRA_MESSAGE =
+            "com.example.ggblog.extra.MESSAGE";
 
     private static final String FIRST_PAGE = "first";
     private static final String PREV_PAGE = "prev";
@@ -168,19 +172,21 @@ public class MainActivity extends AppCompatActivity {
         mAuthorsListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, final View view,
             int position, long id) {
-
                 RequestQueue queue = RequestUtils.getInstance(
                         getApplicationContext()).getRequestQueue();
                 // Cancel any ongoing request to retrieve Authors list, since we are switching
                 // to the Author Details page
                 if (queue != null) {
-                    queue.cancelAll(TAG);
+                    queue.cancelAll(AUTHORS_LIST_REQUEST_TAG);
                 }
                 //final String item = (String) parent.getItemAtPosition(position);
                 //Log.i(TAG, "Selected Author Name: " + item);
                 String authorId = mAuthorIdArray.get(position);
                 Log.i(TAG, "Selected Author ID " + authorId);
-                // TODO: open a new page showing the Posts written by the selected author
+                // Open a new page showing the Posts written by the selected author
+                Intent intent = new Intent(getApplicationContext(), AuthorDetailsActivity.class);
+                intent.putExtra(EXTRA_MESSAGE, authorId);
+                startActivity(intent);
             }
         });
         mButtonFirstPage = (Button) findViewById(R.id.buttonFirstPage);
