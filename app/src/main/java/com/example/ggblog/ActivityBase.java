@@ -68,8 +68,8 @@ public abstract class ActivityBase extends AppCompatActivity {
 
     protected static final String JSON_SERVER_URL = "http://sym-json-server.herokuapp.com";
 
-    private TextView mHeaderTextView;
-    private ListView mItemsListView;
+    private TextView mItemsListTitle;
+    private ListView mItemsListContent;
     private Button mButtonFirstPage;
     private Button mButtonPrevPage;
     private Button mButtonNextPage;
@@ -160,12 +160,20 @@ public abstract class ActivityBase extends AppCompatActivity {
         }
     }
 
+    /*
+    Each Activity will have its own associated layout:
+    1) Header (different)
+    2) Content (same for all)
+    3) Buttons (same for all)
+    */
+    protected abstract int getContentView();
+
     /* Each Activity knows which is the Next Activity when clicking on a specific item to have
     more details (e.g. From Authors List to Author Details)
     */
     protected abstract Class<?> getNextActivityClass();
-    /* Information to be displayed on top of the page (header) */
-    protected abstract String getInfoToDisplayOnHeader();
+    /* Title to be displayed on top of the Table */
+    protected abstract String getListTitle();
     /* Information to be displayed on the Table (listing the authors, posts, comments...) */
     protected abstract ArrayList<String> getInfoToDisplayOnTable(JSONArray jsonArray);
     /*
@@ -178,14 +186,14 @@ public abstract class ActivityBase extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate");
-        setContentView(R.layout.activity_main);
+        setContentView(getContentView());
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        mHeaderTextView = (TextView) findViewById(R.id.headerTextView);
-        /* Each Activity will have a different implementation of getInfoToDisplayOnHeader() */
-        mHeaderTextView.setText(getInfoToDisplayOnHeader());
-        mItemsListView = (ListView)findViewById(R.id.itemsListView);
-        mItemsListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        mItemsListTitle = (TextView) findViewById(R.id.itemsListTitle);
+        /* Each Activity will have a different implementation of getListTitle() */
+        mItemsListTitle.setText(getListTitle());
+        mItemsListContent = (ListView)findViewById(R.id.itemsListContent);
+        mItemsListContent.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, final View view,
             int position, long id) {
                 if(VDBG) Log.d(TAG, "onItemClick");
@@ -325,7 +333,7 @@ public abstract class ActivityBase extends AppCompatActivity {
         if (VDBG) Log.d(TAG, "updateListView");
         ArrayAdapter<String> listAdapter =
                 new ArrayAdapter<String>(getApplicationContext(), R.layout.simple_row, itemsList);
-        mItemsListView.setAdapter(listAdapter);
+        mItemsListContent.setAdapter(listAdapter);
     }
 
     private void updateAvailableButtons() {

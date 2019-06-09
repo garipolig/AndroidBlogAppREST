@@ -20,7 +20,7 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <include layout="@layout/cover_image" />
+    <include layout="@layout/author_details" />
     <include layout="@layout/items_list" />
     <include layout="@layout/pagination_buttons" />
 

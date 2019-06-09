@@ -3,6 +3,7 @@ package com.example.ggblog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.TextView;
 
 import java.util.ArrayList;
 
@@ -30,10 +31,20 @@ public class PostsActivity extends ActivityBase {
     private static final String GET_FIRST_PAGE = GET_INFO_URL + "?" +
             GET_PAGE_NUM_ACTION_KEY + "=1";
 
+    private TextView mAuthorName;
+    private TextView mAuthorUserName;
+    private TextView mAuthorEmail;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate");
+        mAuthorName = (TextView) findViewById(R.id.authorName);
+        mAuthorName.setText("test");
+        mAuthorUserName = (TextView) findViewById(R.id.authorUserName);
+        mAuthorUserName.setText("test");
+        mAuthorEmail = (TextView) findViewById(R.id.authorEmail);
+        mAuthorEmail.setText("test");
         // The Intent used to start this activity
         Intent intent = getIntent();
         String authorId = intent.getStringExtra(MainActivity.EXTRA_MESSAGE);
@@ -47,6 +58,10 @@ public class PostsActivity extends ActivityBase {
         }
     }
 
+    protected int getContentView() {
+        return R.layout.activity_main2;
+    }
+
     protected Class<?> getNextActivityClass() {
         if (VDBG) Log.d(TAG, "getNextActivityClass");
         // return CommentsActivity.class;
@@ -54,8 +69,8 @@ public class PostsActivity extends ActivityBase {
         return null;
     }
 
-    protected String getInfoToDisplayOnHeader() {
-        if (VDBG) Log.d(TAG, "getInfoToDisplayOnHeader");
+    protected String getListTitle() {
+        if (VDBG) Log.d(TAG, "getListTitle");
         return getString(R.string.posts_list);
     }
 

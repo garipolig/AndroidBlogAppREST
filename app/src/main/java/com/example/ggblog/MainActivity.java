@@ -42,13 +42,17 @@ public class MainActivity extends ActivityBase {
         }
     }
 
+    protected int getContentView() {
+        return R.layout.activity_main;
+    }
+
     protected Class<?> getNextActivityClass() {
         if (VDBG) Log.d(TAG, "getNextActivityClass");
         return PostsActivity.class;
     }
 
-    protected String getInfoToDisplayOnHeader() {
-        if (VDBG) Log.d(TAG, "getInfoToDisplayOnHeader");
+    protected String getListTitle() {
+        if (VDBG) Log.d(TAG, "getListTitle");
         return getString(R.string.authors_list);
     }
 
