@@ -16,16 +16,16 @@ public class RequestUtils {
     private static final boolean DBG = ActivityBase.DBG;
     private static final boolean VDBG = ActivityBase.VDBG;
 
-    private static RequestUtils instance;
-    private RequestQueue requestQueue;
-    private ImageLoader imageLoader;
-    private static Context ctx;
+    private static RequestUtils INSTANCE;
+    private RequestQueue mRequestQueue;
+    private ImageLoader mImageLoader;
+    private static Context mContext;
 
     private RequestUtils(Context context) {
-        ctx = context;
-        requestQueue = getRequestQueue();
+        mContext = context;
+        mRequestQueue = getRequestQueue();
 
-        imageLoader = new ImageLoader(requestQueue,
+        mImageLoader = new ImageLoader(mRequestQueue,
                 new ImageLoader.ImageCache() {
             private final LruCache<String, Bitmap>
                     cache = new LruCache<String, Bitmap>(20);
@@ -46,18 +46,18 @@ public class RequestUtils {
 
     public static synchronized RequestUtils getInstance(Context context) {
         if (VDBG) Log.d(TAG, "getInstance");
-        if (instance == null) {
-            instance = new RequestUtils(context);
+        if (INSTANCE == null) {
+            INSTANCE = new RequestUtils(context);
         }
-        return instance;
+        return INSTANCE;
     }
 
     public RequestQueue getRequestQueue() {
         if (VDBG) Log.d(TAG, "getRequestQueue");
-        if (requestQueue == null) {
-            requestQueue = Volley.newRequestQueue(ctx.getApplicationContext());
+        if (mRequestQueue == null) {
+            mRequestQueue = Volley.newRequestQueue(mContext.getApplicationContext());
         }
-        return requestQueue;
+        return mRequestQueue;
     }
 
     public <T> void addToRequestQueue(Request<T> req) {
@@ -67,6 +67,6 @@ public class RequestUtils {
 
     public ImageLoader getImageLoader() {
         if (VDBG) Log.d(TAG, "getImageLoader");
-        return imageLoader;
+        return mImageLoader;
     }
 }
