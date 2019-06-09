@@ -50,14 +50,29 @@ public class MainActivity extends AppCompatActivity {
     private static final String PAGE_LINK_REGEXP = "<([^\"]*)>";
     private static final String PAGE_REL_REGEXP = "\"([^\"]*)\"";
 
+    private static final String ID_ATTR_KEY = "id";
+    private static final String NAME_ATTR_KEY = "name";
+
+    private static final String GET_PAGE_NUM_ACTION_KEY = "_page";
+    private static final String LIMIT_NUM_RESULTS_ACTION_KEY = "_limit";
+    private static final String SORT_RESULTS_ACTION_KEY = "_sort";
+    private static final String ORDER_RESULTS_ACTION_KEY = "_order";
+
+    // Possible extension: make those parameters user configurable through UI Settings
+    private static final String AUTHORS_SORTING_ATTRIBUTES = NAME_ATTR_KEY;
+    private static final String AUTHORS_ORDERING_METHODS = "asc";
+    private static final String MAX_NUM_AUTHORS_PER_PAGE = "20";
+
     private static final String GET_AUTHORS_URL =
             "http://sym-json-server.herokuapp.com/authors";
 
-    private static final String GET_FIRST_PAGE = GET_AUTHORS_URL + "?_page=1";
-    // Possible extension: make those parameters user configurable through UI Settings
-    private static final String AUTHORS_SORTING_ATTRIBUTES = "name";
-    private static final String AUTHORS_ORDERING_METHODS = "asc";
-    private static final String MAX_NUM_AUTHORS_PER_PAGE = "20";
+    // Used when creating a Request to retrieve the authors list.
+    // Thanks to this TAG we are able to cancel any ongoing requests not yet sent to the Server
+    private static final String AUTHORS_LIST_REQUEST_TAG =
+            "AUTHORS_LIST_REQUEST";
+
+    private static final String GET_FIRST_PAGE = GET_AUTHORS_URL + "?" +
+            GET_PAGE_NUM_ACTION_KEY + "=1";
 
     private TextView mHeaderTextView;
     private ListView mAuthorsListView;
@@ -153,7 +168,14 @@ public class MainActivity extends AppCompatActivity {
         mAuthorsListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, final View view,
             int position, long id) {
-                RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
+
+                RequestQueue queue = RequestUtils.getInstance(
+                        getApplicationContext()).getRequestQueue();
+                // Cancel any ongoing request to retrieve Authors list, since we are switching
+                // to the Author Details page
+                if (queue != null) {
+                    queue.cancelAll(TAG);
+                }
                 //final String item = (String) parent.getItemAtPosition(position);
                 //Log.i(TAG, "Selected Author Name: " + item);
                 String authorId = mAuthorIdArray.get(position);
@@ -197,11 +219,9 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-        retrieveAuthorsList(
-                GET_FIRST_PAGE +
-                "&_sort=" + AUTHORS_SORTING_ATTRIBUTES +
-                "&_order=" + AUTHORS_ORDERING_METHODS +
-                "&_limit=" + MAX_NUM_AUTHORS_PER_PAGE);
+        // When activity is created we Retrieve the first page of authors
+        retrieveAuthorsList(computeFirstRequestUrl());
+
     }
 
     @Override
@@ -225,45 +245,81 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    // Used only when the Activity is created, to retrieve the first page or authors
+    // Starting from this moment, the buttons firstPage, PrevPage, NextPage and LastPage will be
+    // automatically populated with the correct URL Request, thanks to the Link section present in
+    // the Response header
+    private String computeFirstRequestUrl() {
+        Log.d(TAG, "computeFirstRequestUrl");
+        StringBuilder requestUrl = new StringBuilder(GET_FIRST_PAGE);
+        Log.d(TAG, "Initial URL is " + requestUrl);
+        addUrlParam(requestUrl, SORT_RESULTS_ACTION_KEY, AUTHORS_SORTING_ATTRIBUTES);
+        addUrlParam(requestUrl, ORDER_RESULTS_ACTION_KEY, AUTHORS_ORDERING_METHODS);
+        addUrlParam(requestUrl, LIMIT_NUM_RESULTS_ACTION_KEY, MAX_NUM_AUTHORS_PER_PAGE);
+        return requestUrl.toString();
+    }
+
+    private void addUrlParam(StringBuilder url, String param, String value) {
+        Log.d(TAG, "addUrlParam");
+        if (url != null && !url.toString().isEmpty()) {
+            Log.d(TAG, "param=" + param + ", value=" + value);
+            if (param != null && !param.isEmpty() &&
+                    value != null && !value.isEmpty()) {
+                url.append("&" + param + "=" + value);
+                Log.d(TAG, "New URL is " + url);
+            } else {
+                Log.e(TAG, "Invalid param/value");
+            }
+        } else {
+            Log.e(TAG, "URL null or empty");
+        }
+    }
+
     private void retrieveAuthorsList(String url) {
-        RequestQueue queue = Volley.newRequestQueue(this);
-        CustomJsonArrayRequest jsonArrayRequest = new CustomJsonArrayRequest
-                (Request.Method.GET, url, null, new Response.Listener<JSONArray>() {
-            @Override
-            public void onResponse(JSONArray response) {
-                Log.i(TAG, "Response: " + response.toString());
-                // The Id will be used when the user will click on a specific row of the Author list
-                // This list is refreshed each time the user ask for a new list of authors (using
-                // pagination)
-                mAuthorIdArray = new ArrayList<String>();
-                // We will only visualize the Author names in the UI
-                ArrayList<String> authorsList = new ArrayList<String>();
-                for (int i = 0; i < response.length(); i++) {
-                    try {
-                        JSONObject jsonObject = response.getJSONObject(i);
-                        String currId = jsonObject.getString("id");
-                        Log.i(TAG, "Current Author Id: " + currId);
-                        mAuthorIdArray.add(currId);
-                        String currName = jsonObject.getString("name");
-                        Log.i(TAG, "Current Author Name: " + currName);
-                        authorsList.add(currName);
-                    } catch (JSONException e) {
-                        e.printStackTrace();
+        if (url != null && !url.isEmpty()) {
+            Log.d(TAG, "retrieveAuthorsList URL=" + url);
+            RequestQueue queue = RequestUtils.getInstance(
+                    this.getApplicationContext()).getRequestQueue();
+            CustomJsonArrayRequest jsonArrayRequest = new CustomJsonArrayRequest
+                    (Request.Method.GET, url, null, new Response.Listener<JSONArray>() {
+                @Override
+                public void onResponse(JSONArray response) {
+                    Log.i(TAG, "Response: " + response.toString());
+                    // The Id will be used when the user will click on a specific row of the Author
+                    // list. This list is refreshed each time the user asks for a new list of
+                    // authors (we are using pagination)
+                    mAuthorIdArray = new ArrayList<String>();
+                    // We will only visualize the Author names in the UI
+                    ArrayList<String> authorsList = new ArrayList<String>();
+                    for (int i = 0; i < response.length(); i++) {
+                        try {
+                            JSONObject jsonObject = response.getJSONObject(i);
+                            String currId = jsonObject.getString(ID_ATTR_KEY);
+                            Log.i(TAG, "Current Author Id: " + currId);
+                            mAuthorIdArray.add(currId);
+                            String currName = jsonObject.getString(NAME_ATTR_KEY);
+                            Log.i(TAG, "Current Author Name: " + currName);
+                            authorsList.add(currName);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
                     }
+                    updateAuthorListView(authorsList);
+                    updateAvailableButtons();
                 }
-                updateAuthorListView(authorsList);
-                updateAvailableButtons();
-            }
-        }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                Log.e(TAG, "ERROR");
-            }
-        });
-        // Add the request to the RequestQueue
-        //jsonArrayRequest.setShouldCache(false);
-        jsonArrayRequest.setTag(TAG);
-        queue.add(jsonArrayRequest);
+            }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    Log.e(TAG, "ERROR");
+                }
+            });
+            // Add the request to the RequestQueue
+            //jsonArrayRequest.setShouldCache(false);
+            jsonArrayRequest.setTag(AUTHORS_LIST_REQUEST_TAG);
+            queue.add(jsonArrayRequest);
+        } else {
+            Log.e(TAG, "URL null or empty");
+        }
     }
 
     private void updateAuthorListView(ArrayList<String> authorsList) {
