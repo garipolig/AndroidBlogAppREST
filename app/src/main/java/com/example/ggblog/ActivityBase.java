@@ -52,11 +52,21 @@ public abstract class ActivityBase extends AppCompatActivity {
     private static final String PAGE_LINK_REGEXP = "<([^\"]*)>";
     private static final String PAGE_REL_REGEXP = "\"([^\"]*)\"";
 
-    protected static final String ID_ATTR_KEY = "id";
-    protected static final String AUTHOR_ID_ATTR_KEY = "authorId";
-    protected static final String NAME_ATTR_KEY = "name";
-    protected static final String DATE_ATTR_KEY = "date";
-    protected static final String TITLE_ATTR_KEY = "title";
+    public static final String ID_ATTR_KEY = "id";
+    public static final String AUTHOR_ID_ATTR_KEY = "authorId";
+    public static final String NAME_ATTR_KEY = "name";
+    public static final String USERNAME_ATTR_KEY = "userName";
+    public static final String EMAIL_ATTR_KEY = "email";
+    public static final String AVATAR_URL_ATTR_KEY = "avatarUrl";
+    public static final String ADDRESS_ATTR_KEY = "address";
+    public static final String ADDRESS_LAT_ATTR_KEY = "latitude";
+    public static final String ADDRESS_LONG_ATTR_KEY = "longitude";
+    public static final String DATE_ATTR_KEY = "date";
+    public static final String TITLE_ATTR_KEY = "title";
+    public static final String BODY_ATTR_KEY = "body";
+    public static final String IMAGE_URL_ATTR_KEY = "imageUrl";
+
+    public static final String LINK_ATTR_KEY = "Link";
 
     protected static final String GET_PAGE_NUM_ACTION_KEY = "_page";
     protected static final String LIMIT_NUM_RESULTS_ACTION_KEY = "_limit";
@@ -67,26 +77,21 @@ public abstract class ActivityBase extends AppCompatActivity {
     protected static final String ORDERING_METHOD_DESC = "desc";
 
     protected static final String JSON_SERVER_URL = "http://sym-json-server.herokuapp.com";
+    protected static final String JSON_SERVER_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
+    protected static final String UI_DATE_FORMAT = "dd.MM.yyyy 'at' HH:mm:ss z" ;
 
-    private TextView mItemsListTitle;
-    private ListView mItemsListContent;
-    private Button mButtonFirstPage;
-    private Button mButtonPrevPage;
-    private Button mButtonNextPage;
-    private Button mButtonLastPage;
+    private TextView mItemsListTitleTextView;
+    private ListView mItemsListContentListView;
+    private Button mFirstPageButton;
+    private Button mPrevPageButton;
+    private Button mNextPageButton;
+    private Button mLastPageButton;
 
     private String mCurrentPageRequest;
     private String mFirstPageRequest;
     private String mPrevPageRequest;
     private String mNextPageRequest;
     private String mLastPageRequest;
-
-    /*
-    Hosts the IDs of the Items (authors, posts, comments...) currently displayed, since we are
-    using pagination. This list will be used when the user clicks on a specific row of the items
-    list, to get details about the specific item.
-     */
-    protected ArrayList<String> mItemsIdArray;
 
     /*
     Needing a Custom JsonArrayRequest, to retrieve the Link from header, which is not
@@ -117,7 +122,7 @@ public abstract class ActivityBase extends AppCompatActivity {
                 String jsonStringData = new String(response.data,
                         HttpHeaderParser.parseCharset(response.headers, PROTOCOL_CHARSET));
                 if(VDBG) Log.d(TAG, "Full Header: " + response.headers);
-                String jsonStringHeaderLink = response.headers.get("Link");
+                String jsonStringHeaderLink = response.headers.get(LINK_ATTR_KEY);
                 if(VDBG) Log.d(TAG, "Header Link: " + jsonStringHeaderLink);
                 mCurrentPageRequest = mRequestedUrl;
                 /*
@@ -168,10 +173,19 @@ public abstract class ActivityBase extends AppCompatActivity {
     */
     protected abstract int getContentView();
 
-    /* Each Activity knows which is the Next Activity when clicking on a specific item to have
-    more details (e.g. From Authors List to Author Details)
+    /*
+    Each Activity is handling its own list of items (authors, posts, comments...) and knows how to
+    retrieve the ID of the items selected on the UI, depending on the position in the ListView
     */
-    protected abstract Class<?> getNextActivityClass();
+    protected abstract String getSelectedItemId(int position);
+
+    /*
+    Each Activity knows which is the Next Activity when clicking on a specific item to have
+    more details (e.g. From Authors List to Author Details).
+    The correct Intent with the related content needs to be created
+    */
+    protected abstract Intent createTransitionIntent(int position);
+
     /* Title to be displayed on top of the Table */
     protected abstract String getListTitle();
     /* Information to be displayed on the Table (listing the authors, posts, comments...) */
@@ -189,37 +203,40 @@ public abstract class ActivityBase extends AppCompatActivity {
         setContentView(getContentView());
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        mItemsListTitle = (TextView) findViewById(R.id.itemsListTitle);
+        mItemsListTitleTextView = (TextView) findViewById(R.id.itemsListTitle);
         /* Each Activity will have a different implementation of getListTitle() */
-        mItemsListTitle.setText(getListTitle());
-        mItemsListContent = (ListView)findViewById(R.id.itemsListContent);
-        mItemsListContent.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        mItemsListTitleTextView.setText(getListTitle());
+        mItemsListContentListView = (ListView)findViewById(R.id.itemsListContent);
+        mItemsListContentListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, final View view,
             int position, long id) {
-                if(VDBG) Log.d(TAG, "onItemClick");
+                if(VDBG) Log.d(TAG, "onItemClick position=" + position + ", id=" + id);
                 RequestQueue queue = RequestUtils.getInstance(
                         getApplicationContext()).getRequestQueue();
                 /*
-                Cancel any ongoing request to retrieve a new items (authors, posts, comments...)
-                , since we are switching to a new page (e.g. from Authors List to Post List).
+                Cancel any ongoing request to retrieve a new items (authors, posts, comments...),
+                since we are switching to a new page (e.g. from Authors List to Post List).
                 */
                 if (queue != null) {
                     queue.cancelAll(getRequestTag());
                 }
-                /*
-                final String item = (String) parent.getItemAtPosition(position);
-                if(DBG) Log.d(TAG, "Selected Author Name: " + item);
-                */
-                String itemId = mItemsIdArray.get(position);
+                String itemId = getSelectedItemId(position);
                 if(DBG) Log.d(TAG, "Selected ID " + itemId);
-                /* Open a new activity (it will depend on the implementation of each page) */
-                Intent intent = new Intent(getApplicationContext(), getNextActivityClass());
-                intent.putExtra(EXTRA_MESSAGE, itemId);
-                startActivity(intent);
+                if (itemId != null) {
+                    /* Open a new activity (the intent will depend on the implementation of each page) */
+                    Intent intent = createTransitionIntent(position);
+                    if (intent != null) {
+                        startActivity(intent);
+                    } else {
+                        Log.e(TAG, "created intent is NULL");
+                    }
+                } else {
+                    Log.e(TAG, "unable to retrieve the selected item ID");
+                }
             }
         });
-        mButtonFirstPage = (Button) findViewById(R.id.buttonFirstPage);
-        mButtonFirstPage.setOnClickListener(new OnClickListener() {
+        mFirstPageButton = (Button) findViewById(R.id.buttonFirstPage);
+        mFirstPageButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 if(VDBG) Log.d(TAG, "onClick");
@@ -228,8 +245,8 @@ public abstract class ActivityBase extends AppCompatActivity {
                 }
             }
         });
-        mButtonPrevPage = (Button) findViewById(R.id.buttonPrevPage);
-        mButtonPrevPage.setOnClickListener(new OnClickListener() {
+        mPrevPageButton = (Button) findViewById(R.id.buttonPrevPage);
+        mPrevPageButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 if(VDBG) Log.d(TAG, "onClick");
@@ -238,8 +255,8 @@ public abstract class ActivityBase extends AppCompatActivity {
                 }
             }
         });
-        mButtonNextPage = (Button) findViewById(R.id.buttonNextPage);
-        mButtonNextPage.setOnClickListener(new OnClickListener() {
+        mNextPageButton = (Button) findViewById(R.id.buttonNextPage);
+        mNextPageButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 if(VDBG) Log.d(TAG, "onClick");
@@ -248,8 +265,8 @@ public abstract class ActivityBase extends AppCompatActivity {
                 }
             }
         });
-        mButtonLastPage = (Button) findViewById(R.id.buttonLastPage);
-        mButtonLastPage.setOnClickListener(new OnClickListener() {
+        mLastPageButton = (Button) findViewById(R.id.buttonLastPage);
+        mLastPageButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 if(VDBG) Log.d(TAG, "onClick");
@@ -296,8 +313,12 @@ public abstract class ActivityBase extends AppCompatActivity {
                 public void onResponse(JSONArray response) {
                     if (DBG) Log.d(TAG, "Response: " + response.toString());
                     ArrayList<String> infoToDisplay = getInfoToDisplayOnTable(response);
-                    updateListView(infoToDisplay);
-                    updateAvailableButtons();
+                    if (infoToDisplay != null && !infoToDisplay.isEmpty()) {
+                        updateListView(infoToDisplay);
+                        updateAvailableButtons();
+                    } else {
+                        Log.e(TAG, "unable to retrieve the info to display");
+                    }
                 }
             }, new Response.ErrorListener() {
                 @Override
@@ -333,7 +354,7 @@ public abstract class ActivityBase extends AppCompatActivity {
         if (VDBG) Log.d(TAG, "updateListView");
         ArrayAdapter<String> listAdapter =
                 new ArrayAdapter<String>(getApplicationContext(), R.layout.simple_row, itemsList);
-        mItemsListContent.setAdapter(listAdapter);
+        mItemsListContentListView.setAdapter(listAdapter);
     }
 
     private void updateAvailableButtons() {
@@ -341,15 +362,15 @@ public abstract class ActivityBase extends AppCompatActivity {
         /* Enable/Disable the buttons according to the available page request */
         if (VDBG) Log.d(TAG, "First Page Request=" + mFirstPageRequest);
         /* Avoiding to display the First Page Button if we are already at the First Page */
-        mButtonFirstPage.setEnabled(mFirstPageRequest != null &&
+        mFirstPageButton.setEnabled(mFirstPageRequest != null &&
                 !mCurrentPageRequest.equals(mFirstPageRequest));
         if (VDBG) Log.d(TAG, "Prev Page Request=" + mPrevPageRequest);
-        mButtonPrevPage.setEnabled(mPrevPageRequest != null);
+        mPrevPageButton.setEnabled(mPrevPageRequest != null);
         if (VDBG) Log.d(TAG, "Next Page Request=" + mNextPageRequest);
-        mButtonNextPage.setEnabled(mNextPageRequest != null);
+        mNextPageButton.setEnabled(mNextPageRequest != null);
         if (VDBG) Log.d(TAG, "Last Page Request=" + mLastPageRequest);
         /* Avoiding to display the Last Page Button if we are already at the Last Page */
-        mButtonLastPage.setEnabled(mLastPageRequest != null &&
+        mLastPageButton.setEnabled(mLastPageRequest != null &&
                 !mCurrentPageRequest.equals(mLastPageRequest));
     }
 }
