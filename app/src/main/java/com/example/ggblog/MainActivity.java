@@ -72,6 +72,9 @@ public class MainActivity extends AppCompatActivity {
     private String mNextPageRequest;
     private String mLastPageRequest;
 
+    // Hosts the IDs of the Authors currently displayed
+    ArrayList<String> mAuthorIdArray;
+
     // Needing a Custom JsonArrayRequest, to retrieve the Link from header, which is not
     // retrieved by the default implementation
     // Since we are using pagination when retrieving the authors, the Link is needed to retrieve
@@ -149,8 +152,13 @@ public class MainActivity extends AppCompatActivity {
         mAuthorsListView = (ListView)findViewById(R.id.authorListView);
         mAuthorsListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, final View view,
-                                    int position, long id) {
-                // TODO
+            int position, long id) {
+                RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
+                //final String item = (String) parent.getItemAtPosition(position);
+                //Log.i(TAG, "Selected Author Name: " + item);
+                String authorId = mAuthorIdArray.get(position);
+                Log.i(TAG, "Selected Author ID " + authorId);
+                // TODO: open a new page showing the Posts written by the selected author
             }
         });
         mButtonFirstPage = (Button) findViewById(R.id.buttonFirstPage);
@@ -224,13 +232,18 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onResponse(JSONArray response) {
                 Log.i(TAG, "Response: " + response.toString());
-                // We will only visualize the Author names
+                // The Id will be used when the user will click on a specific row of the Author list
+                // This list is refreshed each time the user ask for a new list of authors (using
+                // pagination)
+                mAuthorIdArray = new ArrayList<String>();
+                // We will only visualize the Author names in the UI
                 ArrayList<String> authorsList = new ArrayList<String>();
                 for (int i = 0; i < response.length(); i++) {
                     try {
                         JSONObject jsonObject = response.getJSONObject(i);
                         String currId = jsonObject.getString("id");
                         Log.i(TAG, "Current Author Id: " + currId);
+                        mAuthorIdArray.add(currId);
                         String currName = jsonObject.getString("name");
                         Log.i(TAG, "Current Author Name: " + currName);
                         authorsList.add(currName);
