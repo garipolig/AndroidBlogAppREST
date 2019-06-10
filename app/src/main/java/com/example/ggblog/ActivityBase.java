@@ -41,8 +41,11 @@ import java.io.UnsupportedEncodingException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -106,8 +109,21 @@ public abstract class ActivityBase extends AppCompatActivity {
 
     protected static final Class<?> MAIN_ACTIVITY = MainActivity.class;
 
+    /*
+    The SharedPreferences in common for all the Activities.
+    Keeping it as a Set collection for future extensions
+    */
+    private static final Set<String> PREFERENCES_KEYS =
+            new HashSet<String>(Arrays.asList(new String[] {
+                    SettingsActivity.PREF_AUTO_REFRESH_KEY
+            }));
+
     private NetworkChangeReceiver mNetworkChangeReceiver;
-    private SharedPreferences mSharedPreferences;
+    protected SharedPreferences mSharedPreferences;
+
+    /* Those preference are set through settings (shared preferences) */
+    protected boolean mIsAutoRefreshEnabledPref;
+    protected String mMaxNumItemsPerPagePref;
 
     private TextView mPageCountersTextView;
     private TextView mItemsListTitleTextView;
@@ -134,9 +150,6 @@ public abstract class ActivityBase extends AppCompatActivity {
 
     /* True when we are not able to retrieve data from server */
     private boolean mIsInfoUnavailable;
-
-    /* This preference is set through settings (shared preferences) */
-    private boolean mIsAutoRefreshEnabledPref;
 
     /*
     Needing a Custom JsonArrayRequest, to retrieve the Link from header, which is not
@@ -501,7 +514,6 @@ public abstract class ActivityBase extends AppCompatActivity {
         mItemsListContentListView.setAdapter(listAdapter);
     }
 
-
     private void udpatePageCounters() {
         if (VDBG) Log.d(TAG, "udpatePageCounters currPageUrl=" + mCurrentPageUrlRequest +
                 ", lastPageUrl=" + mLastPageUrlRequest);
@@ -589,7 +601,7 @@ public abstract class ActivityBase extends AppCompatActivity {
         }
     }
 
-    private boolean retrieveNetworkConnectivityStatus() {
+    protected boolean retrieveNetworkConnectivityStatus() {
         if (VDBG) Log.d(TAG, "retrieveNetworkConnectivityStatus");
         Boolean isConnected = false;
         ConnectivityManager connectivityManager =
@@ -609,7 +621,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     The refresh is made only if we didn't succeed to retrieve the info from server
     and if the auto-refresh option is enabled in Settings
     */
-    private void handleAutoRefresh() {
+    protected void handleAutoRefresh() {
         if (VDBG) Log.d(TAG, "handleAutoRefresh");
         if (mIsInfoUnavailable && mIsAutoRefreshEnabledPref) {
             refresh();
@@ -618,27 +630,47 @@ public abstract class ActivityBase extends AppCompatActivity {
         }
     }
 
-    private void handleSettingChange(String key) {
-        if (VDBG) Log.d(TAG, "handleSettingChange key=" + key);
-        if (key.equals(SettingsActivity.PREF_AUTO_REFRESH_KEY)) {
-            mIsAutoRefreshEnabledPref = mSharedPreferences.getBoolean(
-                    key, SettingsActivity.PREF_AUTO_REFRESH_DEFAULT);
-            if (DBG) Log.d(TAG, "mIsAutoRefreshEnabledPref=" + mIsAutoRefreshEnabledPref);
-            /* Synchronously retrieve the network connectivity */
-            boolean isConnected = retrieveNetworkConnectivityStatus();
-            if (isConnected) {
-                handleAutoRefresh();
-            }
+    protected void retrieveSettings() {
+        if (VDBG) Log.d(TAG, "retrieveSettings for " + PREFERENCES_KEYS);
+        for (String key : PREFERENCES_KEYS) {
+            retrieveSetting(key);
         }
-        /* Check other settings here */
     }
 
-    private void retrieveSettings() {
-        if (VDBG) Log.d(TAG, "retrieveSettings");
-        mIsAutoRefreshEnabledPref = mSharedPreferences.getBoolean(
-                SettingsActivity.PREF_AUTO_REFRESH_KEY, SettingsActivity.PREF_AUTO_REFRESH_DEFAULT);
-        if (DBG) Log.d(TAG, "mIsAutoRefreshEnabledPref=" + mIsAutoRefreshEnabledPref);
-        /* Set other settings here */
+    protected void handleSettingChange(String key) {
+        if (PREFERENCES_KEYS.contains(key)) {
+            if (VDBG) Log.d(TAG, "handleSettingChange key=" + key);
+            /* Retrieving the new value */
+            retrieveSetting(key);
+            /* Perform a special action depending on the setting that has changed */
+            switch (key) {
+                case SettingsActivity.PREF_AUTO_REFRESH_KEY:
+                    /* Synchronously retrieve the network connectivity */
+                    boolean isConnected = retrieveNetworkConnectivityStatus();
+                    if (isConnected) {
+                        handleAutoRefresh();
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    protected void retrieveSetting(String key) {
+        if (PREFERENCES_KEYS.contains(key)) {
+            if (VDBG) Log.d(TAG, "retrieveSetting key=" + key);
+            switch (key) {
+                case SettingsActivity.PREF_AUTO_REFRESH_KEY:
+                    mIsAutoRefreshEnabledPref = mSharedPreferences.getBoolean(
+                            SettingsActivity.PREF_AUTO_REFRESH_KEY,
+                            SettingsActivity.PREF_AUTO_REFRESH_DEFAULT);
+                    if (DBG) Log.d(TAG, "Auto-Refresh Enabled=" + mIsAutoRefreshEnabledPref);
+                    break;
+                default:
+                    break;
+            }
+        }
     }
 
     private void registerSharedPreferencesListener() {

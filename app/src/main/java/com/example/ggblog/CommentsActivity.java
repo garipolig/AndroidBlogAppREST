@@ -7,7 +7,6 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.ActionBar;
 
-import com.android.volley.toolbox.ImageLoader;
 import com.android.volley.toolbox.NetworkImageView;
 
 import org.json.JSONArray;
@@ -15,18 +14,25 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 public class CommentsActivity extends ActivityBase {
 
     private static final String TAG = "CommentsActivity";
 
-    /* Possible extension: make those parameters user configurable through UI Settings */
-
-    /* Possibility to have several sorting attributes, separated by comma */
+    /*
+    Possibility to have several sorting attributes, separated by comma
+    Possible extension: make this parameter configurable through Settings
+    */
     private static final String SORTING_ATTRIBUTES = DATE_ATTR_KEY;
-    /* Possibility to have several ordering attributes (one for each sorting attr). Use comma */
+
+    /*
+    Possibility to have several ordering attributes (one for each sorting attr), separated by comma
+    Possible extension: make this parameter configurable through Settings
+    */
     private static final String ORDERING_METHODS = ORDERING_METHOD_ASC;
-    private static final String MAX_NUM_ITEMS_PER_PAGE = "10";
 
     private static final String SUB_PAGE_URL = "comments";
     private static final String GET_INFO_URL = JSON_SERVER_URL + "/" + SUB_PAGE_URL;
@@ -35,6 +41,17 @@ public class CommentsActivity extends ActivityBase {
 
     private static final String GET_FIRST_PAGE = GET_INFO_URL + "?" +
             GET_PAGE_NUM_ACTION_KEY + "=1";
+
+    /*
+    The SharedPreferences impacting this Activity
+    Keeping it as a Set collection for future extensions
+    */
+    private static final Set<String> PREFERENCES_KEYS =
+            new HashSet<String>(Arrays.asList(new String[] {
+                    SettingsActivity.PREF_MAX_NUM_COMMENTS_PER_PAGE_KEY
+            }));
+
+    private String mCurrentPostId;
 
     private NetworkImageView mPostImageNetworkImageView;
     private TextView mPostBodyTextView;
@@ -49,6 +66,7 @@ public class CommentsActivity extends ActivityBase {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             getSupportActionBar().setDisplayShowHomeEnabled(true);
         }
+        mCurrentPostId = null;
         // Comments are not clickable
         mItemsListContentListView.setOnItemClickListener(null);
         mPostImageNetworkImageView = (NetworkImageView) findViewById(R.id.postImage);
@@ -60,15 +78,11 @@ public class CommentsActivity extends ActivityBase {
         Post post = (Post) intent.getParcelableExtra(EXTRA_MESSAGE);
         if (post != null) {
             if (VDBG) Log.d(TAG, "Post received=" + post);
+            mCurrentPostId = post.getId();
             mPostBodyTextView.setText(post.getBody());
             setImage(post.getImageUrl(), mPostImageNetworkImageView);
             /* When activity is created, retrieve the Comments to show */
-            String requestUrl = computeFirstRequestUrl(post.getId());
-            if (requestUrl != null && !requestUrl.isEmpty()) {
-                retrieveItemsList(requestUrl);
-            } else {
-                Log.e(TAG, "invalid request URL");
-            }
+            retrieveInitialDataFromServer(post.getId());
         } else {
             Log.e(TAG, "Post is NULL");
         }
@@ -118,6 +132,59 @@ public class CommentsActivity extends ActivityBase {
         return REQUEST_TAG;
     }
 
+    @Override
+    protected void handleSettingChange(String key) {
+        if (PREFERENCES_KEYS.contains(key)) {
+            if (VDBG) Log.d(TAG, "handleSettingChange key=" + key);
+            /* Retrieving the new value */
+            retrieveSetting(key);
+            /* Perform a special action depending on the setting that has changed */
+            switch (key) {
+                case SettingsActivity.PREF_MAX_NUM_COMMENTS_PER_PAGE_KEY:
+                    /*
+                    Re-creating again the list of Comments with the new pagination, as if we were
+                    starting again this Activity.
+                    */
+                    retrieveInitialDataFromServer(mCurrentPostId);
+                    break;
+                default:
+                    break;
+            }
+        } else {
+            super.handleSettingChange(key);
+        }
+    }
+
+    @Override
+    protected void retrieveSettings() {
+        if (VDBG) Log.d(TAG, "retrieveSettings for " + PREFERENCES_KEYS);
+        /* Retrieving the preferences only handled by this Activity */
+        for (String key : PREFERENCES_KEYS) {
+            retrieveSetting(key);
+        }
+        /* Asking the superclass to retrieve the rest */
+        super.retrieveSettings();
+    }
+
+    @Override
+    protected void retrieveSetting(String key) {
+        if (PREFERENCES_KEYS.contains(key)) {
+            if (VDBG) Log.d(TAG, "retrieveSetting key=" + key);
+            switch (key) {
+                case SettingsActivity.PREF_MAX_NUM_COMMENTS_PER_PAGE_KEY:
+                    mMaxNumItemsPerPagePref = mSharedPreferences.getString(
+                            SettingsActivity.PREF_MAX_NUM_COMMENTS_PER_PAGE_KEY,
+                            SettingsActivity.PREF_MAX_NUM_COMMENTS_PER_PAGE_DEFAULT);
+                    if (DBG) Log.d(TAG, "Max Num Comments/Page=" + mMaxNumItemsPerPagePref);
+                    break;
+                default:
+                    break;
+            }
+        } else {
+            super.retrieveSetting(key);
+        }
+    }
+
     protected String getSelectedItemId(int position) {
         if (VDBG) Log.d(TAG, "getSelectedItemId position=" + position);
         Log.e(TAG, "This method cannot be called in this class. Comments are not clickable");
@@ -128,6 +195,16 @@ public class CommentsActivity extends ActivityBase {
         if (VDBG) Log.d(TAG, "createTransitionIntent");
         // No transitions available through Intent from this Activity
         return null;
+    }
+
+    private void retrieveInitialDataFromServer(String postId) {
+        if (VDBG) Log.d(TAG, "retrieveInitialDataFromServer PostId=" + postId);
+        String requestUrl = computeFirstRequestUrl(postId);
+        if (requestUrl != null && !requestUrl.isEmpty()) {
+            retrieveItemsList(requestUrl);
+        } else {
+            Log.e(TAG, "invalid request URL");
+        }
     }
 
     /*
@@ -145,7 +222,7 @@ public class CommentsActivity extends ActivityBase {
             addUrlParam(requestUrlSb, POST_ID_ATTR_KEY, postId);
             addUrlParam(requestUrlSb, SORT_RESULTS_ACTION_KEY, SORTING_ATTRIBUTES);
             addUrlParam(requestUrlSb, ORDER_RESULTS_ACTION_KEY, ORDERING_METHODS);
-            addUrlParam(requestUrlSb, LIMIT_NUM_RESULTS_ACTION_KEY, MAX_NUM_ITEMS_PER_PAGE);
+            addUrlParam(requestUrlSb, LIMIT_NUM_RESULTS_ACTION_KEY, mMaxNumItemsPerPagePref);
             requestUrl = requestUrlSb.toString();
         } else {
             Log.e(TAG, "post id is NULL or empty");

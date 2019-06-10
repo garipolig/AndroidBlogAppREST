@@ -15,13 +15,22 @@
 
     <!-- Preference Titles -->
     <string name="general_prefs_header">General</string>
-    <string name="author_prefs_header">Authors (not supported yet)</string>
-    <string name="posts_prefs_header">Posts (not supported yet)</string>
-    <string name="comments_prefs_header">Comments (not supported yet)</string>
+    <string name="author_prefs_header">Authors Page</string>
+    <string name="posts_prefs_header">Posts Page</string>
+    <string name="comments_prefs_header">Comments Page</string>
 
     <!-- Auto-Refresh Preferences -->
     <string name="auto_refresh_title">Auto-Refresh</string>
     <string name="auto_refresh_summary_on">Refresh when network becomes available</string>
     <string name="auto_refresh_summary_off">Refresh only when manually requested</string>
+
+    <!-- Authors Page Preferences -->
+    <string name="max_num_authors_per_page_title">Max lines per page</string>
+
+    <!-- Posts Page Preferences -->
+    <string name="max_num_posts_per_page_title">Max lines per page</string>
+
+    <!-- Comments Page Preferences -->
+    <string name="max_num_comments_per_page_title">Max lines per page</string>
 
 </resources>

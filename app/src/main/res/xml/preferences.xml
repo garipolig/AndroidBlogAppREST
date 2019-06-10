@@ -12,15 +12,33 @@
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/author_prefs_header">
-        <!-- TODO as future extension  -->
+
+        <EditTextPreference
+            app:key="maxNumAuthorsPerPage"
+            app:defaultValue="20"
+            app:title="@string/max_num_authors_per_page_title"
+            app:useSimpleSummaryProvider="true" />
+
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/posts_prefs_header">
-        <!-- TODO as future extension  -->
+
+        <EditTextPreference
+            app:key="maxNumPostsPerPage"
+            app:defaultValue="10"
+            app:title="@string/max_num_posts_per_page_title"
+            app:useSimpleSummaryProvider="true" />
+
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/comments_prefs_header">
-        <!-- TODO as future extension  -->
+
+        <EditTextPreference
+            app:key="maxNumCommentsPerPage"
+            app:defaultValue="10"
+            app:title="@string/max_num_comments_per_page_title"
+            app:useSimpleSummaryProvider="true" />
+
     </PreferenceCategory>
 
 </androidx.preference.PreferenceScreen>

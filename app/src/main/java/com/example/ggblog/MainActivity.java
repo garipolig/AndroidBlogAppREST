@@ -6,6 +6,9 @@ import android.util.SparseArray;
 import android.util.Log;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -17,11 +20,17 @@ public class MainActivity extends ActivityBase {
 
     /* Possible extension: make those parameters user configurable through UI Settings */
 
-    /* Possibility to have several sorting attributes, separated by comma */
+    /*
+    Possibility to have several sorting attributes, separated by comma
+    Possible extension: make this parameter configurable through Settings
+    */
     private static final String SORTING_ATTRIBUTES = NAME_ATTR_KEY;
-    /* Possibility to have several ordering attributes (one for each sorting attr). Use comma */
+
+    /*
+    Possibility to have several ordering attributes (one for each sorting attr), separated by comma
+    Possible extension: make this parameter configurable through Settings
+    */
     private static final String ORDERING_METHODS = ORDERING_METHOD_ASC;
-    private static final String MAX_NUM_ITEMS_PER_PAGE = "20";
 
     private static final String SUB_PAGE_URL = "authors";
     private static final String GET_INFO_URL = JSON_SERVER_URL + "/" + SUB_PAGE_URL;
@@ -32,6 +41,15 @@ public class MainActivity extends ActivityBase {
             GET_PAGE_NUM_ACTION_KEY + "=1";
 
     private static final Class<?> NEXT_ACTIVITY = PostsActivity.class;
+
+    /*
+    The SharedPreferences impacting this Activity
+    Keeping it as a Set collection for future extensions
+    */
+    private static final Set<String> PREFERENCES_KEYS =
+            new HashSet<String>(Arrays.asList(new String[] {
+                    SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY
+            }));
 
     /*
     Hosts the Authors currently displayed, since we are using pagination.
@@ -58,12 +76,7 @@ public class MainActivity extends ActivityBase {
             return;
         }
         /* When activity is created, retrieve the authors to show */
-        String requestUrl = computeFirstRequestUrl();
-        if (requestUrl != null && !requestUrl.isEmpty()) {
-            retrieveItemsList(requestUrl);
-        } else {
-            Log.e(TAG, "invalid request URL");
-        }
+        retrieveInitialDataFromServer();
     }
 
     protected int getContentView() {
@@ -108,6 +121,59 @@ public class MainActivity extends ActivityBase {
         return REQUEST_TAG;
     }
 
+    @Override
+    protected void handleSettingChange(String key) {
+        if (PREFERENCES_KEYS.contains(key)) {
+            if (VDBG) Log.d(TAG, "handleSettingChange key=" + key);
+            /* Retrieving the new value */
+            retrieveSetting(key);
+            /* Perform a special action depending on the setting that has changed */
+            switch (key) {
+                case SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY:
+                    /*
+                    Re-creating again the list of Authors with the new pagination, as if we were
+                    starting again this Activity.
+                    */
+                    retrieveInitialDataFromServer();
+                    break;
+                default:
+                    break;
+            }
+        } else {
+            super.handleSettingChange(key);
+        }
+    }
+
+    @Override
+    protected void retrieveSettings() {
+        if (VDBG) Log.d(TAG, "retrieveSettings for " + PREFERENCES_KEYS);
+        /* Retrieving the preferences only handled by this Activity */
+        for (String key : PREFERENCES_KEYS) {
+            retrieveSetting(key);
+        }
+        /* Asking the superclass to retrieve the rest */
+        super.retrieveSettings();
+    }
+
+    @Override
+    protected void retrieveSetting(String key) {
+        if (PREFERENCES_KEYS.contains(key)) {
+            if (VDBG) Log.d(TAG, "retrieveSetting key=" + key);
+            switch (key) {
+                case SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY:
+                    mMaxNumItemsPerPagePref = mSharedPreferences.getString(
+                            SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY,
+                            SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_DEFAULT);
+                    if (DBG) Log.d(TAG, "Max Num Posts/Page=" + mMaxNumItemsPerPagePref);
+                    break;
+                default:
+                    break;
+            }
+        } else {
+            super.retrieveSetting(key);
+        }
+    }
+
     protected String getSelectedItemId(int position) {
         if (VDBG) Log.d(TAG, "getSelectedItemId position=" + position);
         String id = null;
@@ -136,6 +202,16 @@ public class MainActivity extends ActivityBase {
         return intent;
     }
 
+    private void retrieveInitialDataFromServer() {
+        if (VDBG) Log.d(TAG, "retrieveInitialDataFromServer");
+        String requestUrl = computeFirstRequestUrl();
+        if (requestUrl != null && !requestUrl.isEmpty()) {
+            retrieveItemsList(requestUrl);
+        } else {
+            Log.e(TAG, "invalid request URL");
+        }
+    }
+
     /*
     Retrieving the first page of authors (we are using pagination)
     Starting from this moment, the buttons firstPage, PrevPage, NextPage and LastPage will be
@@ -148,7 +224,7 @@ public class MainActivity extends ActivityBase {
         if (DBG) Log.d(TAG, "Initial URL is " + requestUrlSb);
         addUrlParam(requestUrlSb, SORT_RESULTS_ACTION_KEY, SORTING_ATTRIBUTES);
         addUrlParam(requestUrlSb, ORDER_RESULTS_ACTION_KEY, ORDERING_METHODS);
-        addUrlParam(requestUrlSb, LIMIT_NUM_RESULTS_ACTION_KEY, MAX_NUM_ITEMS_PER_PAGE);
+        addUrlParam(requestUrlSb, LIMIT_NUM_RESULTS_ACTION_KEY, mMaxNumItemsPerPagePref);
         return requestUrlSb.toString();
     }
 }

@@ -17,6 +17,15 @@ public class SettingsActivity extends AppCompatActivity {
     public static final String PREF_AUTO_REFRESH_KEY = "autoRefresh";
     public static final Boolean PREF_AUTO_REFRESH_DEFAULT = true;
 
+    public static final String PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY = "maxNumAuthorsPerPage";
+    public static final String PREF_MAX_NUM_AUTHORS_PER_PAGE_DEFAULT = "20";
+
+    public static final String PREF_MAX_NUM_POSTS_PER_PAGE_KEY = "maxNumPostsPerPage";
+    public static final String PREF_MAX_NUM_POSTS_PER_PAGE_DEFAULT = "20";
+
+    public static final String PREF_MAX_NUM_COMMENTS_PER_PAGE_KEY = "maxNumCommentsPerPage";
+    public static final String PREF_MAX_NUM_COMMENTS_PER_PAGE_DEFAULT = "20";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
