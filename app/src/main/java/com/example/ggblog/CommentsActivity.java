@@ -44,6 +44,8 @@ public class CommentsActivity extends ActivityBase {
         // Comments are not clickable
         mItemsListContentListView.setOnItemClickListener(null);
         mPostImageNetworkImageView = (NetworkImageView) findViewById(R.id.postImage);
+        // Default image until network one is retrieved
+        mPostImageNetworkImageView.setDefaultImageResId(R.drawable.default_post_image);
         mPostBodyTextView = (TextView) findViewById(R.id.postBody);
         // The Intent used to start this activity
         Intent intent = getIntent();

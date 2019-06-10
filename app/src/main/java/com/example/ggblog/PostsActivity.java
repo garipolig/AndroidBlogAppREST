@@ -65,6 +65,8 @@ public class PostsActivity extends ActivityBase {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate");
         mAuthorAvatarNetworkImageView = (NetworkImageView) findViewById(R.id.authorAvatar);
+        // Default image until network one is retrieved
+        mAuthorAvatarNetworkImageView.setDefaultImageResId(R.drawable.default_author_image);
         mAuthorNameTextView = (TextView) findViewById(R.id.authorName);
         mAuthorUserNameTextView = (TextView) findViewById(R.id.authorUserName);
         mAuthorEmailTextView = (TextView) findViewById(R.id.authorEmail);

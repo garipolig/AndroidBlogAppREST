@@ -325,12 +325,14 @@ public abstract class ActivityBase extends AppCompatActivity {
                         updateAvailableButtons();
                     } else {
                         Log.e(TAG, "unable to retrieve the info to display");
+                        setErrorMessage();
                     }
                 }
             }, new Response.ErrorListener() {
                 @Override
                 public void onErrorResponse(VolleyError error) {
-                    Log.e(TAG, "ERROR");
+                    Log.e(TAG, "Error while retrieving data from server");
+                    setErrorMessage();
                 }
             });
             /* Add the request to the RequestQueue */
@@ -379,6 +381,13 @@ public abstract class ActivityBase extends AppCompatActivity {
             Log.e(TAG, "date is NULL");
         }
         return formattedDate;
+    }
+
+    protected void setErrorMessage() {
+        if (VDBG) Log.d(TAG, "setErrorMessage");
+        ArrayList<String> arrayList = new ArrayList<>();
+        arrayList.add(getString(R.string.error_message));
+        updateListView(arrayList);
     }
 
     protected void setImage(String url, NetworkImageView networkImageView) {

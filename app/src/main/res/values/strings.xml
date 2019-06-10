@@ -8,4 +8,5 @@
     <string name="button_prev_page">Previous Page</string>
     <string name="button_next_page">Next Page</string>
     <string name="button_last_page">Last Page</string>
+    <string name="error_message">unable to retrieve data</string>
 </resources>
