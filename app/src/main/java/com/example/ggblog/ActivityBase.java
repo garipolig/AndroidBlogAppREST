@@ -23,13 +23,19 @@ import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.HttpHeaderParser;
+import com.android.volley.toolbox.ImageLoader;
 import com.android.volley.toolbox.JsonArrayRequest;
+import com.android.volley.toolbox.NetworkImageView;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.io.UnsupportedEncodingException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -54,6 +60,7 @@ public abstract class ActivityBase extends AppCompatActivity {
 
     public static final String ID_ATTR_KEY = "id";
     public static final String AUTHOR_ID_ATTR_KEY = "authorId";
+    public static final String POST_ID_ATTR_KEY = "postId";
     public static final String NAME_ATTR_KEY = "name";
     public static final String USERNAME_ATTR_KEY = "userName";
     public static final String EMAIL_ATTR_KEY = "email";
@@ -81,7 +88,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     protected static final String UI_DATE_FORMAT = "dd.MM.yyyy 'at' HH:mm:ss z" ;
 
     private TextView mItemsListTitleTextView;
-    private ListView mItemsListContentListView;
+    protected ListView mItemsListContentListView;
     private Button mFirstPageButton;
     private Button mPrevPageButton;
     private Button mNextPageButton;
@@ -347,6 +354,49 @@ public abstract class ActivityBase extends AppCompatActivity {
             }
         } else {
             Log.e(TAG, "URL null or empty");
+        }
+    }
+
+    protected String formatDate(String date, String currentPattern, String newPattern) {
+        if (VDBG) Log.d(TAG, "formatDate");
+        String formattedDate = null;
+        if (date != null) {
+            /* Formatting the date from currentPattern to newPattern */
+            SimpleDateFormat dateFormatter =
+                    new SimpleDateFormat(currentPattern, Locale.getDefault());
+            try {
+                Date dateToFormat = dateFormatter.parse(date);
+                if (dateToFormat != null) {
+                    dateFormatter = new SimpleDateFormat(newPattern, Locale.getDefault());
+                    formattedDate = dateFormatter.format(dateToFormat).toString();
+                } else {
+                    Log.e(TAG, "Unable to format date coming from JSON Server");
+                }
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+        } else {
+            Log.e(TAG, "date is NULL");
+        }
+        return formattedDate;
+    }
+
+    protected void setImage(String url, NetworkImageView networkImageView) {
+        if (VDBG) Log.d(TAG, "setImage");
+        if (url != null && !url.isEmpty()) {
+            if (networkImageView != null) {
+                ImageLoader imageLoader = RequestUtils.getInstance(
+                        this.getApplicationContext()).getImageLoader();
+                if (imageLoader != null) {
+                    networkImageView.setImageUrl(url, imageLoader);
+                } else {
+                    Log.e(TAG, "unable to retrieve the ImageLoader");
+                }
+            } else {
+                Log.e(TAG, "unable to retrieve the networkImageView");
+            }
+        } else {
+            if (VDBG) Log.d(TAG, "Author avatar N/A");
         }
     }
 

@@ -77,7 +77,7 @@ public class MainActivity extends ActivityBase {
             try {
                 JSONObject jsonObject = jsonArray.getJSONObject(i);
                 Author author = new Author(jsonObject);
-                if (author != null && author.getId() != null) {
+                if (author != null) {
                     if (VDBG) Log.d(TAG, "Current Author " + author.toString());
                     /*
                     Using as key the position of the author in the jsonArray, which will be

@@ -8,16 +8,12 @@ import android.util.Log;
 import android.util.SparseArray;
 import android.widget.TextView;
 
-import com.android.volley.toolbox.ImageLoader;
 import com.android.volley.toolbox.NetworkImageView;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Locale;
 import java.util.List;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -49,6 +45,8 @@ public class PostsActivity extends ActivityBase {
     private TextView mAuthorEmailTextView;
     private TextView mAuthorAddressTextView;
 
+    private static final Class<?> NEXT_ACTIVITY = CommentsActivity.class;
+
     /*
     Hosts the Posts currently displayed, since we are using pagination.
     The position of the Post in the SparseArray corresponds to the position in the ListView shown
@@ -79,7 +77,7 @@ public class PostsActivity extends ActivityBase {
             mAuthorNameTextView.setText(author.getName());
             mAuthorUserNameTextView.setText(author.getUserName());
             mAuthorEmailTextView.setText(author.getEmail());
-            setAuthorAvatar(author.getAvatarUrl());
+            setImage(author.getAvatarUrl(), mAuthorAvatarNetworkImageView);
             setAuthorAddress(author.getAddressLatitude(), author.getAddressLongitude());
             /* When activity is created, retrieve the Posts to show */
             String requestUrl = computeFirstRequestUrl(author.getId());
@@ -94,7 +92,7 @@ public class PostsActivity extends ActivityBase {
     }
 
     protected int getContentView() {
-        return R.layout.activity_main2;
+        return R.layout.activity_posts;
     }
 
     protected String getListTitle() {
@@ -111,7 +109,7 @@ public class PostsActivity extends ActivityBase {
             try {
                 JSONObject jsonObject = jsonArray.getJSONObject(i);
                 Post post = new Post(jsonObject);
-                if (post != null && post.getId() != null) {
+                if (post != null) {
                     if (VDBG) Log.d(TAG, "Current Post " + post.toString());
                     /*
                     Using as key the position of the post in the jsonArray, which will be
@@ -120,25 +118,12 @@ public class PostsActivity extends ActivityBase {
                     mPostsArray.put(i, post);
                     /*
                     Info that will be displayed on UI.
-                    Considering only the post date (day, year and month) and the title
+                    Considering only the post date and the title
                     */
                     if (post.getDate() != null) {
-                        /* Formatting the date from JSON_SERVER_DATE_FORMAT to UI_DATE_FORMAT */
-                        SimpleDateFormat dateFormatter = new SimpleDateFormat(
-                                JSON_SERVER_DATE_FORMAT, Locale.getDefault());
-                        try {
-                            Date date = dateFormatter.parse(post.getDate());
-                            if (date != null) {
-                                dateFormatter = new SimpleDateFormat(
-                                        UI_DATE_FORMAT, Locale.getDefault());
-                                String formattedDate = dateFormatter.format(date).toString();
-                                itemsList.add(formattedDate + "\n" + post.getTitle());
-                            } else {
-                                Log.e(TAG, "Unable to format date coming from JSON Server");
-                            }
-                        } catch (ParseException e) {
-                            e.printStackTrace();
-                        }
+                        String date = formatDate(
+                                post.getDate(), JSON_SERVER_DATE_FORMAT, UI_DATE_FORMAT);
+                        itemsList.add(date + "\n" + post.getTitle());
                     } else {
                         Log.e(TAG, "Unable to retrieve the Post date");
                     }
@@ -173,9 +158,15 @@ public class PostsActivity extends ActivityBase {
     }
 
     protected Intent createTransitionIntent(int position) {
-        if (VDBG) Log.d(TAG, "createTransitionIntent");
-        // TODO when CommentsActivity is created
+        if (VDBG) Log.d(TAG, "createTransitionIntent position=" + position);
         Intent intent = null;
+        if (mPostsArray != null) {
+            intent = new Intent(getApplicationContext(), NEXT_ACTIVITY);
+            if (VDBG) Log.d(TAG, "Post to send: " + mPostsArray.get(position));
+            intent.putExtra(EXTRA_MESSAGE, mPostsArray.get(position));
+        } else {
+            Log.e(TAG, "unable to create intent since mPostsArray is NULL");
+        }
         return intent;
     }
 
@@ -200,21 +191,6 @@ public class PostsActivity extends ActivityBase {
             Log.e(TAG, "author id is NULL or empty");
         }
         return requestUrl;
-    }
-
-    private void setAuthorAvatar(String url) {
-        if (VDBG) Log.d(TAG, "setAuthorAvatar");
-        if (url != null && !url.isEmpty()) {
-            ImageLoader imageLoader = RequestUtils.getInstance(
-                    this.getApplicationContext()).getImageLoader();
-            if (imageLoader != null) {
-                mAuthorAvatarNetworkImageView.setImageUrl(url, imageLoader);
-            } else {
-                Log.e(TAG, "unable to retrieve the ImageLoader");
-            }
-        } else {
-            if (VDBG) Log.d(TAG, "Author avatar N/A");
-        }
     }
 
     private void setAuthorAddress(String latitude, String longitude) {

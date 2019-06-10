@@ -3,6 +3,7 @@
     <string name="action_settings">Settings</string>
     <string name="authors_list">List of Authors</string>
     <string name="posts_list">List of Posts</string>
+    <string name="comments_list">List of Comments</string>
     <string name="button_first_page">First Page</string>
     <string name="button_prev_page">Previous Page</string>
     <string name="button_next_page">Next Page</string>
