@@ -68,8 +68,12 @@ public abstract class ActivityBase extends AppCompatActivity {
     private static final String NEXT_PAGE = "next";
     private static final String LAST_PAGE = "last";
 
+    /* Page link is between "<" and ">" in the Response Header*/
     private static final String PAGE_LINK_REGEXP = "<([^\"]*)>";
+    /* Page rel (first, next, prev, last) is around " " on the Page Link section */
     private static final String PAGE_REL_REGEXP = "\"([^\"]*)\"";
+    /* Page number is between "page=" and ">" or "&" (depends on the position of the param in URL)*/
+    private static final String PAGE_NUM_REGEXP = "page=([0-9]*)&";
 
     public static final String ID_ATTR_KEY = "id";
     public static final String AUTHOR_ID_ATTR_KEY = "authorId";
@@ -105,6 +109,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     private NetworkChangeReceiver mNetworkChangeReceiver;
     private SharedPreferences mSharedPreferences;
 
+    private TextView mPageCountersTextView;
     private TextView mItemsListTitleTextView;
     protected ListView mItemsListContentListView;
     private Button mFirstPageButton;
@@ -262,6 +267,7 @@ public abstract class ActivityBase extends AppCompatActivity {
         setContentView(getContentView());
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        mPageCountersTextView = (TextView) findViewById(R.id.pageCounters);
         mItemsListTitleTextView = (TextView) findViewById(R.id.itemsListTitle);
         /* Each Activity will have a different implementation of getListTitle() */
         mItemsListTitleTextView.setText(getListTitle());
@@ -402,6 +408,7 @@ public abstract class ActivityBase extends AppCompatActivity {
                         setErrorMessage();
                         updateAvailableButtons(true);
                     }
+                    udpatePageCounters();
                 }
             }, new Response.ErrorListener() {
                 @Override
@@ -410,6 +417,7 @@ public abstract class ActivityBase extends AppCompatActivity {
                     mIsInfoUnavailable = true;
                     setErrorMessage();
                     updateAvailableButtons(true);
+                    udpatePageCounters();
                 }
             });
             /* Add the request to the RequestQueue */
@@ -491,6 +499,37 @@ public abstract class ActivityBase extends AppCompatActivity {
         ArrayAdapter<String> listAdapter =
                 new ArrayAdapter<String>(getApplicationContext(), R.layout.simple_row, itemsList);
         mItemsListContentListView.setAdapter(listAdapter);
+    }
+
+
+    private void udpatePageCounters() {
+        if (VDBG) Log.d(TAG, "udpatePageCounters currPageUrl=" + mCurrentPageUrlRequest +
+                ", lastPageUrl=" + mLastPageUrlRequest);
+        if (mCurrentPageUrlRequest!= null && mLastPageUrlRequest != null) {
+            String currPageNum = null;
+            String lastPageNum = null;
+            /* Extracting the page number from the URL */
+            Pattern patternPageNum = Pattern.compile(PAGE_NUM_REGEXP);
+            /* Current Page Number */
+            Matcher matcherCurrPageNum = patternPageNum.matcher(mCurrentPageUrlRequest);
+            if (matcherCurrPageNum.find()) {
+                currPageNum = matcherCurrPageNum.group(1);
+                if (VDBG) Log.d(TAG, "Current Page Num=" + currPageNum);
+                /* Last Page Number */
+                Matcher matcherLastPageNum = patternPageNum.matcher(mLastPageUrlRequest);
+                if (matcherLastPageNum.find()) {
+                    lastPageNum = matcherLastPageNum.group(1);
+                    if (VDBG) Log.d(TAG, "Last Page Num=" + lastPageNum);
+                }
+            }
+            if (currPageNum != null && lastPageNum != null) {
+                mPageCountersTextView.setText("Page " + currPageNum + "/" + lastPageNum);
+            } else {
+                mPageCountersTextView.setText("");
+            }
+        } else {
+            mPageCountersTextView.setText("");
+        }
     }
 
     private void updateAvailableButtons(boolean forceDisabling) {
