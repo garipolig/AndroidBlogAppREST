@@ -50,6 +50,13 @@ public class MainActivity extends ActivityBase {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate");
+        /* In case this Activity has been started to ask to close the application */
+        Intent intent = getIntent();
+        if (intent != null && getIntent().getBooleanExtra(EXTRA_EXIT, false)) {
+            if (VDBG) Log.d(TAG, "Received request to close the application");
+            exitApplication();
+            return;
+        }
         /* When activity is created, retrieve the authors to show */
         String requestUrl = computeFirstRequestUrl();
         if (requestUrl != null && !requestUrl.isEmpty()) {

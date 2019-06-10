@@ -50,6 +50,9 @@ public abstract class ActivityBase extends AppCompatActivity {
     public static final String EXTRA_MESSAGE =
             "com.example.ggblog.extra.MESSAGE";
 
+    public static final String EXTRA_EXIT =
+            "com.example.ggblog.extra.EXIT";
+
     private static final String FIRST_PAGE = "first";
     private static final String PREV_PAGE = "prev";
     private static final String NEXT_PAGE = "next";
@@ -87,6 +90,8 @@ public abstract class ActivityBase extends AppCompatActivity {
     protected static final String JSON_SERVER_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
     protected static final String UI_DATE_FORMAT = "dd.MM.yyyy 'at' HH:mm:ss z" ;
 
+    protected static final Class<?> MAIN_ACTIVITY = MainActivity.class;
+
     private TextView mItemsListTitleTextView;
     protected ListView mItemsListContentListView;
     private Button mFirstPageButton;
@@ -94,11 +99,17 @@ public abstract class ActivityBase extends AppCompatActivity {
     private Button mNextPageButton;
     private Button mLastPageButton;
 
-    private String mCurrentPageRequest;
-    private String mFirstPageRequest;
-    private String mPrevPageRequest;
-    private String mNextPageRequest;
-    private String mLastPageRequest;
+    /*
+    Resetting the page requests that are available on the current page displayed, which
+    are retrived from the header Link comin
+    Those URL requests will be used by specific buttons, to move between pages
+    */
+    private String mLastUrlRequestSentToServer;
+    private String mCurrentPageUrlRequest;
+    private String mFirstPageUrlRequest;
+    private String mPrevPageUrlRequest;
+    private String mNextPageUrlRequest;
+    private String mLastPageUrlRequest;
 
     /*
     Needing a Custom JsonArrayRequest, to retrieve the Link from header, which is not
@@ -131,15 +142,7 @@ public abstract class ActivityBase extends AppCompatActivity {
                 if(VDBG) Log.d(TAG, "Full Header: " + response.headers);
                 String jsonStringHeaderLink = response.headers.get(LINK_ATTR_KEY);
                 if(VDBG) Log.d(TAG, "Header Link: " + jsonStringHeaderLink);
-                mCurrentPageRequest = mRequestedUrl;
-                /*
-                Resetting the page requests that are available on the current page displayed
-                Those URL requests will be used by specific buttons, to move between pages
-                */
-                mFirstPageRequest = null;
-                mPrevPageRequest = null;
-                mNextPageRequest = null;
-                mLastPageRequest = null;
+                mCurrentPageUrlRequest = mRequestedUrl;
                 /* Page link is placed between <> */
                 Pattern patternPageLink = Pattern.compile(PAGE_LINK_REGEXP);
                 Matcher matcherPageLink = patternPageLink.matcher(jsonStringHeaderLink);
@@ -153,13 +156,13 @@ public abstract class ActivityBase extends AppCompatActivity {
                     String currPageRel = matcherPageRel.group(1);
                     if(VDBG) Log.d(TAG, "PageRel: " + currPageRel);
                     if (currPageRel.equals(FIRST_PAGE)) {
-                        mFirstPageRequest = currPageLink;
+                        mFirstPageUrlRequest = currPageLink;
                     } else if (currPageRel.equals(PREV_PAGE)) {
-                        mPrevPageRequest = currPageLink;
+                        mPrevPageUrlRequest = currPageLink;
                     } else if (currPageRel.equals(NEXT_PAGE)) {
-                        mNextPageRequest = currPageLink;
+                        mNextPageUrlRequest = currPageLink;
                     }  else if (currPageRel.equals(LAST_PAGE)) {
-                        mLastPageRequest = currPageLink;
+                        mLastPageUrlRequest = currPageLink;
                     }
                 }
                 return Response.success(
@@ -247,8 +250,8 @@ public abstract class ActivityBase extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if(VDBG) Log.d(TAG, "onClick");
-                if (mFirstPageRequest != null) {
-                    retrieveItemsList(mFirstPageRequest);
+                if (mFirstPageUrlRequest != null) {
+                    retrieveItemsList(mFirstPageUrlRequest);
                 }
             }
         });
@@ -257,8 +260,8 @@ public abstract class ActivityBase extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if(VDBG) Log.d(TAG, "onClick");
-                if (mPrevPageRequest != null) {
-                    retrieveItemsList(mPrevPageRequest);
+                if (mPrevPageUrlRequest != null) {
+                    retrieveItemsList(mPrevPageUrlRequest);
                 }
             }
         });
@@ -267,8 +270,8 @@ public abstract class ActivityBase extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if(VDBG) Log.d(TAG, "onClick");
-                if (mNextPageRequest != null) {
-                    retrieveItemsList(mNextPageRequest);
+                if (mNextPageUrlRequest != null) {
+                    retrieveItemsList(mNextPageUrlRequest);
                 }
             }
         });
@@ -277,8 +280,8 @@ public abstract class ActivityBase extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if(VDBG) Log.d(TAG, "onClick");
-                if (mLastPageRequest != null) {
-                    retrieveItemsList(mLastPageRequest);
+                if (mLastPageUrlRequest != null) {
+                    retrieveItemsList(mLastPageUrlRequest);
                 }
             }
         });
@@ -287,10 +290,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         if (VDBG) Log.d(TAG, "onCreateOptionsMenu");
-        /*
-        Do not show the "Settings" menu in the action bar for the moment
         getMenuInflater().inflate(R.menu.menu_main, menu);
-        */
         return true;
     }
 
@@ -301,17 +301,35 @@ public abstract class ActivityBase extends AppCompatActivity {
         Handle action bar item clicks here. The action bar will automatically handle clicks on
         the Home/Up button, so long as you specify a parent activity in AndroidManifest.xml.
         */
-        int id = item.getItemId();
-        if (id == R.id.action_settings) {
-            return true;
+        switch (item.getItemId()) {
+            case R.id.action_refresh:
+                if (VDBG) Log.d(TAG, "Refresh item selected");
+                refresh();
+                break;
+            case R.id.action_exit:
+                if (VDBG) Log.d(TAG, "Exit item selected");
+                exitApplication();
+                break;
+            default:
+                return super.onOptionsItemSelected(item);
         }
-        return super.onOptionsItemSelected(item);
+        return true;
     }
 
     protected void retrieveItemsList(String url) {
         if (VDBG) Log.d(TAG, "retrieveItemsList");
         if (url != null && !url.isEmpty()) {
             if (VDBG) Log.d(TAG, "URL=" + url);
+            mLastUrlRequestSentToServer = url;
+            /*
+            Those values will be set once we receive the answer from the Server
+            They are part of the response header
+            */
+            mCurrentPageUrlRequest = null;
+            mFirstPageUrlRequest = null;
+            mPrevPageUrlRequest = null;
+            mNextPageUrlRequest = null;
+            mLastPageUrlRequest = null;
             RequestQueue queue = RequestUtils.getInstance(
                     this.getApplicationContext()).getRequestQueue();
             CustomJsonArrayRequest jsonArrayRequest = new CustomJsonArrayRequest
@@ -322,10 +340,11 @@ public abstract class ActivityBase extends AppCompatActivity {
                     ArrayList<String> infoToDisplay = getInfoToDisplayOnTable(response);
                     if (infoToDisplay != null && !infoToDisplay.isEmpty()) {
                         updateListView(infoToDisplay);
-                        updateAvailableButtons();
+                        updateAvailableButtons(false);
                     } else {
                         Log.e(TAG, "unable to retrieve the info to display");
                         setErrorMessage();
+                        updateAvailableButtons(true);
                     }
                 }
             }, new Response.ErrorListener() {
@@ -333,6 +352,7 @@ public abstract class ActivityBase extends AppCompatActivity {
                 public void onErrorResponse(VolleyError error) {
                     Log.e(TAG, "Error while retrieving data from server");
                     setErrorMessage();
+                    updateAvailableButtons(true);
                 }
             });
             /* Add the request to the RequestQueue */
@@ -416,20 +436,60 @@ public abstract class ActivityBase extends AppCompatActivity {
         mItemsListContentListView.setAdapter(listAdapter);
     }
 
-    private void updateAvailableButtons() {
-        if (VDBG) Log.d(TAG, "updateAvailableButtons");
+    private void updateAvailableButtons(boolean forceDisabling) {
+        if (VDBG) Log.d(TAG, "updateAvailableButtons forceDisabling=" + forceDisabling);
         /* Enable/Disable the buttons according to the available page request */
-        if (VDBG) Log.d(TAG, "First Page Request=" + mFirstPageRequest);
+        if (VDBG) Log.d(TAG, "First Page Request=" + mFirstPageUrlRequest);
         /* Avoiding to display the First Page Button if we are already at the First Page */
-        mFirstPageButton.setEnabled(mFirstPageRequest != null &&
-                !mCurrentPageRequest.equals(mFirstPageRequest));
-        if (VDBG) Log.d(TAG, "Prev Page Request=" + mPrevPageRequest);
-        mPrevPageButton.setEnabled(mPrevPageRequest != null);
-        if (VDBG) Log.d(TAG, "Next Page Request=" + mNextPageRequest);
-        mNextPageButton.setEnabled(mNextPageRequest != null);
-        if (VDBG) Log.d(TAG, "Last Page Request=" + mLastPageRequest);
+        mFirstPageButton.setEnabled(!forceDisabling && mFirstPageUrlRequest != null &&
+                !mCurrentPageUrlRequest.equals(mFirstPageUrlRequest));
+        if (VDBG) Log.d(TAG, "Prev Page Request=" + mPrevPageUrlRequest);
+        mPrevPageButton.setEnabled(!forceDisabling && mPrevPageUrlRequest != null);
+        if (VDBG) Log.d(TAG, "Next Page Request=" + mNextPageUrlRequest);
+        mNextPageButton.setEnabled(!forceDisabling && mNextPageUrlRequest != null);
+        if (VDBG) Log.d(TAG, "Last Page Request=" + mLastPageUrlRequest);
         /* Avoiding to display the Last Page Button if we are already at the Last Page */
-        mLastPageButton.setEnabled(mLastPageRequest != null &&
-                !mCurrentPageRequest.equals(mLastPageRequest));
+        mLastPageButton.setEnabled(!forceDisabling && mLastPageUrlRequest != null &&
+                !mCurrentPageUrlRequest.equals(mLastPageUrlRequest));
+    }
+
+    private void refresh() {
+        if (VDBG) Log.d(TAG, "refresh");
+        /*
+        mCurrentPageUrlRequest is the current page url returned by the Web Server.
+        It won't be set in case we didn't succeed to contact the Server.
+        */
+        if (mCurrentPageUrlRequest != null && !mCurrentPageUrlRequest.isEmpty()) {
+            if (VDBG) Log.d(TAG, "using mCurrentPageUrlRequest");
+            retrieveItemsList(mCurrentPageUrlRequest);
+        /*
+        mLastUrlRequestSentToServer is the last request sent to the Server (not answered)
+        Retrying again to contact the Server.
+        */
+        } else {
+            if (VDBG) Log.d(TAG, "using mLastUrlRequestSentToServer");
+            retrieveItemsList(mLastUrlRequestSentToServer);
+        }
+    }
+
+    public void exitApplication() {
+        if (VDBG) Log.d(TAG, "exitApplication");
+        Class<?> currentClass = getClass();
+        if (VDBG) Log.d(TAG, "currentClass=" + currentClass);
+        if (currentClass != MAIN_ACTIVITY) {
+            /*
+            Only the MainActivity can close the application using the finish() method.
+            Sending an intent to the MainActivity to call its finish() method
+            */
+            if (VDBG) Log.d(TAG, "Sending intent to " + MAIN_ACTIVITY);
+            Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            intent.putExtra(EXTRA_EXIT, true);
+            startActivity(intent);
+        } else {
+            finish();
+        }
     }
 }
