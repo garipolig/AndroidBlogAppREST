@@ -1,6 +1,11 @@
 package com.example.ggblog;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -53,6 +58,9 @@ public abstract class ActivityBase extends AppCompatActivity {
     public static final String EXTRA_EXIT =
             "com.example.ggblog.extra.EXIT";
 
+    private static final String CONNECTIVITY_CHANGE_ACTION =
+            "android.net.conn.CONNECTIVITY_CHANGE";
+
     private static final String FIRST_PAGE = "first";
     private static final String PREV_PAGE = "prev";
     private static final String NEXT_PAGE = "next";
@@ -92,6 +100,8 @@ public abstract class ActivityBase extends AppCompatActivity {
 
     protected static final Class<?> MAIN_ACTIVITY = MainActivity.class;
 
+    private NetworkChangeReceiver mNetworkChangeReceiver;
+
     private TextView mItemsListTitleTextView;
     protected ListView mItemsListContentListView;
     private Button mFirstPageButton;
@@ -99,17 +109,22 @@ public abstract class ActivityBase extends AppCompatActivity {
     private Button mNextPageButton;
     private Button mLastPageButton;
 
-    /*
-    Resetting the page requests that are available on the current page displayed, which
-    are retrived from the header Link comin
-    Those URL requests will be used by specific buttons, to move between pages
-    */
+    /* Last URL request sent to server */
     private String mLastUrlRequestSentToServer;
+    /* Current page URL received from server */
     private String mCurrentPageUrlRequest;
+
+    /* The following URLs are used by specific buttons, to move between pages  */
+    /* First page URL retrieved from the Link section of the server response header */
     private String mFirstPageUrlRequest;
+    /* Previous page URL retrieved from the Link section of the server response header */
     private String mPrevPageUrlRequest;
+    /* Next page URL retrieved from the Link section of the server response header */
     private String mNextPageUrlRequest;
+    /* Last page URL retrieved from the Link section of the server response header */
     private String mLastPageUrlRequest;
+
+    private boolean mIsInfoUnavailable;
 
     /*
     Needing a Custom JsonArrayRequest, to retrieve the Link from header, which is not
@@ -175,6 +190,35 @@ public abstract class ActivityBase extends AppCompatActivity {
         }
     }
 
+    private class NetworkChangeReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (VDBG) Log.d(TAG, "onReceive network change");
+            ConnectivityManager connectivityManager =
+                    (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (connectivityManager != null) {
+                NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+                boolean isConnected = networkInfo != null &&
+                        networkInfo.isConnected();
+                if (DBG) Log.d(TAG, "Connected to network=" + isConnected);
+                if (isConnected) {
+                    /*
+                    All the activities are notified about the network change.
+                    Refreshing only the list belonging to the current active Activity.
+                    The refresh is made only if we didn't succeed to retrieve the info from server
+                    */
+                    if (mIsInfoUnavailable) {
+                        refresh();
+                    } else {
+                        if (VDBG) Log.d(TAG, "Info already available. Nothing to do");
+                    }
+                }
+            } else {
+                Log.e(TAG, "cannot retrieve connectivityManager");
+            }
+        }
+    }
+
     /*
     Each Activity will have its own associated layout:
     1) Header (different)
@@ -210,6 +254,8 @@ public abstract class ActivityBase extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate");
+        mIsInfoUnavailable = false;
+        registerNetworkChangeReceiver();
         setContentView(getContentView());
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -339,10 +385,12 @@ public abstract class ActivityBase extends AppCompatActivity {
                     if (DBG) Log.d(TAG, "Response: " + response.toString());
                     ArrayList<String> infoToDisplay = getInfoToDisplayOnTable(response);
                     if (infoToDisplay != null && !infoToDisplay.isEmpty()) {
+                        mIsInfoUnavailable = false;
                         updateListView(infoToDisplay);
                         updateAvailableButtons(false);
                     } else {
                         Log.e(TAG, "unable to retrieve the info to display");
+                        mIsInfoUnavailable = true;
                         setErrorMessage();
                         updateAvailableButtons(true);
                     }
@@ -351,6 +399,7 @@ public abstract class ActivityBase extends AppCompatActivity {
                 @Override
                 public void onErrorResponse(VolleyError error) {
                     Log.e(TAG, "Error while retrieving data from server");
+                    mIsInfoUnavailable = true;
                     setErrorMessage();
                     updateAvailableButtons(true);
                 }
@@ -472,7 +521,7 @@ public abstract class ActivityBase extends AppCompatActivity {
         }
     }
 
-    public void exitApplication() {
+    protected void exitApplication() {
         if (VDBG) Log.d(TAG, "exitApplication");
         Class<?> currentClass = getClass();
         if (VDBG) Log.d(TAG, "currentClass=" + currentClass);
@@ -490,6 +539,27 @@ public abstract class ActivityBase extends AppCompatActivity {
             startActivity(intent);
         } else {
             finish();
+        }
+    }
+
+    private void registerNetworkChangeReceiver() {
+        if (VDBG) Log.d(TAG, "registerNetworkChangeReceiver");
+        mNetworkChangeReceiver = new NetworkChangeReceiver();
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(CONNECTIVITY_CHANGE_ACTION);
+        registerReceiver(mNetworkChangeReceiver, intentFilter);
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (VDBG) Log.d(TAG, "onDestroy");
+        super.onDestroy();
+        if(mNetworkChangeReceiver != null) {
+            try {
+                unregisterReceiver(mNetworkChangeReceiver);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 }
