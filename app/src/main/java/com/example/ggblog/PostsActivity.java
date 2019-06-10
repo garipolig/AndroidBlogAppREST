@@ -8,6 +8,8 @@ import android.util.Log;
 import android.util.SparseArray;
 import android.widget.TextView;
 
+import androidx.appcompat.app.ActionBar;
+
 import com.android.volley.toolbox.NetworkImageView;
 
 import java.io.IOException;
@@ -64,6 +66,12 @@ public class PostsActivity extends ActivityBase {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate");
+        // Needed to show the back button on the TaskBar
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setDisplayShowHomeEnabled(true);
+        }
         mAuthorAvatarNetworkImageView = (NetworkImageView) findViewById(R.id.authorAvatar);
         // Default image until network one is retrieved
         mAuthorAvatarNetworkImageView.setDefaultImageResId(R.drawable.default_author_image);

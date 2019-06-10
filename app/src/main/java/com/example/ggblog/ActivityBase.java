@@ -4,9 +4,11 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -101,6 +103,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     protected static final Class<?> MAIN_ACTIVITY = MainActivity.class;
 
     private NetworkChangeReceiver mNetworkChangeReceiver;
+    private SharedPreferences mSharedPreferences;
 
     private TextView mItemsListTitleTextView;
     protected ListView mItemsListContentListView;
@@ -124,7 +127,11 @@ public abstract class ActivityBase extends AppCompatActivity {
     /* Last page URL retrieved from the Link section of the server response header */
     private String mLastPageUrlRequest;
 
+    /* True when we are not able to retrieve data from server */
     private boolean mIsInfoUnavailable;
+
+    /* This preference is set through settings (shared preferences) */
+    private boolean mIsAutoRefreshEnabledPref;
 
     /*
     Needing a Custom JsonArrayRequest, to retrieve the Link from header, which is not
@@ -190,31 +197,26 @@ public abstract class ActivityBase extends AppCompatActivity {
         }
     }
 
+    /*
+    Needed to listen for changes in the Settings
+    At the moment we handle only the auto-refresh option, but we can add more options in the future
+    */
+    private SharedPreferences.OnSharedPreferenceChangeListener mSharedPreferenceListener =
+            new SharedPreferences.OnSharedPreferenceChangeListener() {
+        public void onSharedPreferenceChanged(SharedPreferences preference, String key) {
+            if (VDBG) Log.d(TAG, "onSharedPreferenceChanged " + key);
+            handleSettingChange(key);
+        }
+    };
+
     private class NetworkChangeReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (VDBG) Log.d(TAG, "onReceive network change");
-            ConnectivityManager connectivityManager =
-                    (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-            if (connectivityManager != null) {
-                NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
-                boolean isConnected = networkInfo != null &&
-                        networkInfo.isConnected();
-                if (DBG) Log.d(TAG, "Connected to network=" + isConnected);
-                if (isConnected) {
-                    /*
-                    All the activities are notified about the network change.
-                    Refreshing only the list belonging to the current active Activity.
-                    The refresh is made only if we didn't succeed to retrieve the info from server
-                    */
-                    if (mIsInfoUnavailable) {
-                        refresh();
-                    } else {
-                        if (VDBG) Log.d(TAG, "Info already available. Nothing to do");
-                    }
-                }
-            } else {
-                Log.e(TAG, "cannot retrieve connectivityManager");
+            /* Synchronously retrieve the network connectivity */
+            boolean isConnected = retrieveNetworkConnectivityStatus();
+            if (isConnected) {
+                handleAutoRefresh();
             }
         }
     }
@@ -255,6 +257,7 @@ public abstract class ActivityBase extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate");
         mIsInfoUnavailable = false;
+        registerSharedPreferencesListener();
         registerNetworkChangeReceiver();
         setContentView(getContentView());
         Toolbar toolbar = findViewById(R.id.toolbar);
@@ -348,6 +351,11 @@ public abstract class ActivityBase extends AppCompatActivity {
         the Home/Up button, so long as you specify a parent activity in AndroidManifest.xml.
         */
         switch (item.getItemId()) {
+            case R.id.action_settings:
+                if (VDBG) Log.d(TAG, "Settings item selected");
+                Intent intent = new Intent(getApplicationContext(), SettingsActivity.class);
+                startActivity(intent);
+                break;
             case R.id.action_refresh:
                 if (VDBG) Log.d(TAG, "Refresh item selected");
                 refresh();
@@ -542,6 +550,70 @@ public abstract class ActivityBase extends AppCompatActivity {
         }
     }
 
+    private boolean retrieveNetworkConnectivityStatus() {
+        if (VDBG) Log.d(TAG, "retrieveNetworkConnectivityStatus");
+        Boolean isConnected = false;
+        ConnectivityManager connectivityManager =
+                (ConnectivityManager) getApplicationContext().getSystemService(
+                        Context.CONNECTIVITY_SERVICE);
+        if (connectivityManager != null) {
+            NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+            isConnected = networkInfo != null && networkInfo.isConnected();
+        } else {
+            Log.e(TAG, "cannot retrieve connectivityManager");
+        }
+        if (DBG) Log.d(TAG, "Connected to network=" + isConnected);
+        return isConnected;
+    }
+
+    /*
+    The refresh is made only if we didn't succeed to retrieve the info from server
+    and if the auto-refresh option is enabled in Settings
+    */
+    private void handleAutoRefresh() {
+        if (VDBG) Log.d(TAG, "handleAutoRefresh");
+        if (mIsInfoUnavailable && mIsAutoRefreshEnabledPref) {
+            refresh();
+        } else {
+            if (VDBG) Log.d(TAG, "Info already available or auto-refresh disabled");
+        }
+    }
+
+    private void handleSettingChange(String key) {
+        if (VDBG) Log.d(TAG, "handleSettingChange key=" + key);
+        if (key.equals(SettingsActivity.PREF_AUTO_REFRESH_KEY)) {
+            mIsAutoRefreshEnabledPref = mSharedPreferences.getBoolean(
+                    key, SettingsActivity.PREF_AUTO_REFRESH_DEFAULT);
+            if (DBG) Log.d(TAG, "mIsAutoRefreshEnabledPref=" + mIsAutoRefreshEnabledPref);
+            /* Synchronously retrieve the network connectivity */
+            boolean isConnected = retrieveNetworkConnectivityStatus();
+            if (isConnected) {
+                handleAutoRefresh();
+            }
+        }
+        /* Check other settings here */
+    }
+
+    private void retrieveSettings() {
+        if (VDBG) Log.d(TAG, "retrieveSettings");
+        mIsAutoRefreshEnabledPref = mSharedPreferences.getBoolean(
+                SettingsActivity.PREF_AUTO_REFRESH_KEY, SettingsActivity.PREF_AUTO_REFRESH_DEFAULT);
+        if (DBG) Log.d(TAG, "mIsAutoRefreshEnabledPref=" + mIsAutoRefreshEnabledPref);
+        /* Set other settings here */
+    }
+
+    private void registerSharedPreferencesListener() {
+        if (VDBG) Log.d(TAG, "registerSharedPreferencesListener");
+        mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        if (mSharedPreferences != null) {
+            mSharedPreferences.registerOnSharedPreferenceChangeListener(mSharedPreferenceListener);
+            // Retrieving the current settings synchronously
+            retrieveSettings();
+        } else {
+            Log.e(TAG, "mSharedPreferences is NULL");
+        }
+    }
+
     private void registerNetworkChangeReceiver() {
         if (VDBG) Log.d(TAG, "registerNetworkChangeReceiver");
         mNetworkChangeReceiver = new NetworkChangeReceiver();
@@ -554,6 +626,10 @@ public abstract class ActivityBase extends AppCompatActivity {
     protected void onDestroy() {
         if (VDBG) Log.d(TAG, "onDestroy");
         super.onDestroy();
+        if (mSharedPreferences != null) {
+            mSharedPreferences.unregisterOnSharedPreferenceChangeListener(
+                    mSharedPreferenceListener);
+        }
         if(mNetworkChangeReceiver != null) {
             try {
                 unregisterReceiver(mNetworkChangeReceiver);

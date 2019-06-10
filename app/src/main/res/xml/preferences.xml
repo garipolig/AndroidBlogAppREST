@@ -1,0 +1,26 @@
+<androidx.preference.PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="@string/general_prefs_header">
+
+        <SwitchPreferenceCompat
+            app:key="autoRefresh"
+            app:defaultValue="true"
+            app:summaryOff="@string/auto_refresh_summary_off"
+            app:summaryOn="@string/auto_refresh_summary_on"
+            app:title="@string/auto_refresh_title" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/author_prefs_header">
+        <!-- TODO as future extension  -->
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/posts_prefs_header">
+        <!-- TODO as future extension  -->
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/comments_prefs_header">
+        <!-- TODO as future extension  -->
+    </PreferenceCategory>
+
+</androidx.preference.PreferenceScreen>
