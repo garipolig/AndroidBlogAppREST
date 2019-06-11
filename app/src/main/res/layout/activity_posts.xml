@@ -20,8 +20,39 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <include layout="@layout/author_details" />
-    <include layout="@layout/items_list" />
-    <include layout="@layout/pagination_buttons" />
+    <TableLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="0dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="20dp"
+        android:shrinkColumns="*"
+        android:stretchColumns="*">
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <include layout="@layout/author_details" />
+
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <include layout="@layout/items_list" />
+
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <include layout="@layout/pagination_buttons" />
+
+        </TableRow>
+
+    </TableLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

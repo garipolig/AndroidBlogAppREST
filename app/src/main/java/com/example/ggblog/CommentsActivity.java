@@ -113,7 +113,8 @@ public class CommentsActivity extends ActivityBase {
                     if (comment.getDate() != null) {
                         String date = formatDate(
                                 comment.getDate(), JSON_SERVER_DATE_FORMAT, UI_DATE_FORMAT);
-                        itemsList.add(date + "\n" + comment.getBody());
+                        itemsList.add(date + "\n" + comment.getUserName() +
+                                "\n" + comment.getBody());
                     } else {
                         Log.e(TAG, "Unable to retrieve the Post date");
                     }

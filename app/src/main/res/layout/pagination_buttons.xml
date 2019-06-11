@@ -1,67 +1,53 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    app:layout_behavior="@string/appbar_scrolling_view_behavior"
-    tools:context=".MainActivity"
-    tools:showIn="@layout/activity_main">
+    android:orientation="vertical">
 
-    <Button
-        android:id="@+id/buttonFirstPage"
-        android:layout_width="92dp"
-        android:layout_height="57dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
-        android:text="@string/button_first_page"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.974" />
+    <TableLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="25dp"
+        android:shrinkColumns="*"
+        android:stretchColumns="*">
 
-    <Button
-        android:id="@+id/buttonPrevPage"
-        android:layout_width="93dp"
-        android:layout_height="57dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
-        android:text="@string/button_prev_page"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.321"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.974" />
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
 
-    <Button
-        android:id="@+id/buttonNextPage"
-        android:layout_width="93dp"
-        android:layout_height="57dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
-        android:text="@string/button_next_page"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.668"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.974" />
+            <Button
+                android:id="@+id/buttonFirstPage"
+                android:layout_width="93dp"
+                android:layout_height="57dp"
+                android:layout_weight="1"
+                android:layout_column="0"
+                android:text="@string/button_first_page" />
 
-    <Button
-        android:id="@+id/buttonLastPage"
-        android:layout_width="93dp"
-        android:layout_height="57dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
-        android:text="@string/button_last_page"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.974" />
+            <Button
+                android:id="@+id/buttonPrevPage"
+                android:layout_width="93dp"
+                android:layout_height="57dp"
+                android:layout_weight="1"
+                android:layout_column="1"
+                android:text="@string/button_prev_page" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+            <Button
+                android:id="@+id/buttonNextPage"
+                android:layout_width="93dp"
+                android:layout_height="57dp"
+                android:layout_weight="1"
+                android:layout_column="2"
+                android:text="@string/button_next_page" />
+
+            <Button
+                android:id="@+id/buttonLastPage"
+                android:layout_width="93dp"
+                android:layout_height="57dp"
+                android:layout_weight="1"
+                android:layout_column="3"
+                android:text="@string/button_last_page" />
+
+        </TableRow>
+
+    </TableLayout>
+
+</LinearLayout>
