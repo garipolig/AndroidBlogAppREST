@@ -2,6 +2,12 @@
 
     <PreferenceCategory app:title="@string/general_prefs_header">
 
+        <EditTextPreference
+            app:key="webServerUrl"
+            app:defaultValue="http://sym-json-server.herokuapp.com"
+            app:title="@string/web_server_url_title"
+            app:useSimpleSummaryProvider="true"/>
+
         <SwitchPreferenceCompat
             app:key="autoRefresh"
             app:defaultValue="true"
@@ -14,6 +20,12 @@
     <PreferenceCategory app:title="@string/author_prefs_header">
 
         <EditTextPreference
+            app:key="authorsSubPage"
+            app:defaultValue="authors"
+            app:title="@string/authors_sub_page_title"
+            app:useSimpleSummaryProvider="true"/>
+
+        <EditTextPreference
             app:key="maxNumAuthorsPerPage"
             app:defaultValue="20"
             app:title="@string/max_num_authors_per_page_title"
@@ -24,6 +36,12 @@
     <PreferenceCategory app:title="@string/posts_prefs_header">
 
         <EditTextPreference
+            app:key="postsSubPage"
+            app:defaultValue="posts"
+            app:title="@string/posts_sub_page_title"
+            app:useSimpleSummaryProvider="true"/>
+
+        <EditTextPreference
             app:key="maxNumPostsPerPage"
             app:defaultValue="10"
             app:title="@string/max_num_posts_per_page_title"
@@ -32,6 +50,12 @@
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/comments_prefs_header">
+
+        <EditTextPreference
+            app:key="commentsSubPage"
+            app:defaultValue="comments"
+            app:title="@string/comments_sub_page_title"
+            app:useSimpleSummaryProvider="true"/>
 
         <EditTextPreference
             app:key="maxNumCommentsPerPage"

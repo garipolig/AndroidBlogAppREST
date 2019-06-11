@@ -66,13 +66,13 @@ public class Comment implements Parcelable {
     public Comment(JSONObject jsonObject) {
         if (jsonObject != null) {
             try {
-                mId = jsonObject.getString(ActivityBase.ID_ATTR_KEY);
-                mDate = jsonObject.getString(ActivityBase.DATE_ATTR_KEY);
-                mBody = jsonObject.getString(ActivityBase.BODY_ATTR_KEY);
-                mUserName = jsonObject.getString(ActivityBase.USERNAME_ATTR_KEY);
-                mEmail = jsonObject.getString(ActivityBase.EMAIL_ATTR_KEY);
-                mAvatarUrl = jsonObject.getString(ActivityBase.AVATAR_URL_ATTR_KEY);
-                mPostId = jsonObject.getString(ActivityBase.POST_ID_ATTR_KEY);
+                mId = jsonObject.getString(UrlParams.ID);
+                mDate = jsonObject.getString(UrlParams.DATE);
+                mBody = jsonObject.getString(UrlParams.BODY);
+                mUserName = jsonObject.getString(UrlParams.USERNAME);
+                mEmail = jsonObject.getString(UrlParams.EMAIL);
+                mAvatarUrl = jsonObject.getString(UrlParams.AVATAR_URL);
+                mPostId = jsonObject.getString(UrlParams.POST_ID);
             } catch (JSONException e) {
                 e.printStackTrace();
             }

@@ -32,40 +32,29 @@ public class PostsActivity extends ActivityBase {
     Possibility to have several sorting attributes, separated by comma
     Possible extension: make this parameter configurable through Settings
     */
-    private static final String SORTING_ATTRIBUTES = DATE_ATTR_KEY;
+    private static final String SORTING_ATTRIBUTES = UrlParams.DATE;
 
     /*
     Possibility to have several ordering attributes (one for each sorting attr), separated by comma
     Possible extension: make this parameter configurable through Settings
     */
-    private static final String ORDERING_METHODS = ORDERING_METHOD_ASC;
+    private static final String ORDERING_METHODS = UrlParams.ASC_ORDER;
 
-    private static final String SUB_PAGE_URL = "posts";
-    private static final String GET_INFO_URL = JSON_SERVER_URL + "/" + SUB_PAGE_URL;
-
+    /* To identify the Server request and being able to cancel them if needed */
     private static final String REQUEST_TAG = "POSTS_LIST_REQUEST";
 
-    private static final String GET_FIRST_PAGE = GET_INFO_URL + "?" +
-            GET_PAGE_NUM_ACTION_KEY + "=1";
-
     private String mCurrentAuthorId;
-
-    private NetworkImageView mAuthorAvatarNetworkImageView;
-    private TextView mAuthorNameTextView;
-    private TextView mAuthorUserNameTextView;
-    private TextView mAuthorEmailTextView;
-    private TextView mAuthorAddressTextView;
 
     private static final Class<?> NEXT_ACTIVITY = CommentsActivity.class;
 
     /*
-    The SharedPreferences impacting this Activity
-    Keeping it as a Set collection for future extensions
+    SharedPreferences impacting this Activity
     */
     private static final Set<String> PREFERENCES_KEYS =
-            new HashSet<String>(Arrays.asList(new String[] {
+            new HashSet<>(Arrays.asList(
+                    SettingsActivity.PREF_POSTS_SUB_PAGE_KEY,
                     SettingsActivity.PREF_MAX_NUM_POSTS_PER_PAGE_KEY
-            }));
+            ));
 
     /*
     Hosts the Posts currently displayed, since we are using pagination.
@@ -84,35 +73,46 @@ public class PostsActivity extends ActivityBase {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate");
-        // Needed to show the back button on the TaskBar
-        ActionBar actionBar = getSupportActionBar();
-        if (actionBar != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setDisplayShowHomeEnabled(true);
-        }
         mCurrentAuthorId = null;
-        mAuthorAvatarNetworkImageView = (NetworkImageView) findViewById(R.id.authorAvatar);
-        // Default image until network one is retrieved
-        mAuthorAvatarNetworkImageView.setDefaultImageResId(R.drawable.default_author_image);
-        mAuthorNameTextView = (TextView) findViewById(R.id.authorName);
-        mAuthorUserNameTextView = (TextView) findViewById(R.id.authorUserName);
-        mAuthorEmailTextView = (TextView) findViewById(R.id.authorEmail);
-        mAuthorAddressTextView = (TextView) findViewById(R.id.authorAddress);
-        // The Intent used to start this activity
-        Intent intent = getIntent();
-        Author author = (Author) intent.getParcelableExtra(EXTRA_MESSAGE);
-        if (author != null) {
-            if (VDBG) Log.d(TAG, "Author received=" + author);
-            mCurrentAuthorId = author.getId();
-            mAuthorNameTextView.setText(author.getName());
-            mAuthorUserNameTextView.setText(author.getUserName());
-            mAuthorEmailTextView.setText(author.getEmail());
-            setImage(author.getAvatarUrl(), mAuthorAvatarNetworkImageView);
-            setAuthorAddress(author.getAddressLatitude(), author.getAddressLongitude());
-            /* When activity is created, retrieve the Posts to show */
-            retrieveInitialDataFromServer(author.getId());
+        ActionBar actionBar = getSupportActionBar();
+        NetworkImageView authorAvatarNetworkImageView = findViewById(R.id.authorAvatar);
+        TextView authorNameTextView = findViewById(R.id.authorName);
+        TextView authorUserNameTextView = findViewById(R.id.authorUserName);
+        TextView authorEmailTextView = findViewById(R.id.authorEmail);
+        TextView authorAddressTextView = findViewById(R.id.authorAddress);
+        if(actionBar != null && authorAvatarNetworkImageView != null &&
+                authorNameTextView != null && authorUserNameTextView != null &&
+                authorEmailTextView != null && authorAddressTextView != null) {
+            /* Needed to show the back button on the TaskBar */
+            actionBar.setDisplayHomeAsUpEnabled(true);
+            actionBar.setDisplayShowHomeEnabled(true);
+
+            /* Default image until network one is retrieved */
+            authorAvatarNetworkImageView.setDefaultImageResId(R.drawable.default_author_image);
+
+            /* The Intent used to start this activity */
+            Intent intent = getIntent();
+            if (intent != null) {
+                Author author = intent.getParcelableExtra(EXTRA_MESSAGE);
+                if (author != null) {
+                    if (VDBG) Log.d(TAG, "Author received=" + author);
+                    mCurrentAuthorId = author.getId();
+                    authorNameTextView.setText(author.getName());
+                    authorUserNameTextView.setText(author.getUserName());
+                    authorEmailTextView.setText(author.getEmail());
+                    setImage(author.getAvatarUrl(), authorAvatarNetworkImageView);
+                    setAuthorAddress(authorAddressTextView, author.getAddressLatitude(),
+                            author.getAddressLongitude());
+                    /* When activity is created, retrieve the Posts to show */
+                    retrieveInitialDataFromServer(author.getId());
+                } else {
+                    Log.e(TAG, "Author is NULL");
+                }
+            } else {
+                Log.e(TAG, "unable to retrieve the intent");
+            }
         } else {
-            Log.e(TAG, "Author is NULL");
+            Log.e(TAG, "An error occurred while retrieving layout elements");
         }
     }
 
@@ -129,35 +129,43 @@ public class PostsActivity extends ActivityBase {
         if (VDBG) Log.d(TAG, "getInfoToDisplayOnTable");
         /* Start with an empty list of Posts, to be filled from jsonArray */
         mPostsArray = new SparseArray<>();
-        ArrayList<String> itemsList = new ArrayList<String>();
-        for (int i = 0; i < jsonArray.length(); i++) {
-            try {
-                JSONObject jsonObject = jsonArray.getJSONObject(i);
-                Post post = new Post(jsonObject);
-                if (post != null) {
-                    if (VDBG) Log.d(TAG, "Current Post " + post.toString());
-                    /*
-                    Using as key the position of the post in the jsonArray, which will be
-                    the same of the position on the UI (ListView)
-                    */
-                    mPostsArray.put(i, post);
-                    /*
-                    Info that will be displayed on UI.
-                    Considering only the post date and the title
-                    */
-                    if (post.getDate() != null) {
-                        String date = formatDate(
-                                post.getDate(), JSON_SERVER_DATE_FORMAT, UI_DATE_FORMAT);
-                        itemsList.add(date + "\n" + post.getTitle());
+        ArrayList<String> itemsList = new ArrayList<>();
+        if (jsonArray != null && jsonArray.length() > 0) {
+            for (int i = 0; i < jsonArray.length(); i++) {
+                try {
+                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+                    if (jsonObject != null) {
+                        Post post = new Post(jsonObject);
+                        if (post != null) {
+                            if (VDBG) Log.d(TAG, "Current Post " + post.toString());
+                                /*
+                                Using as key the position of the post in the jsonArray, which will be
+                                the same of the position on the UI (ListView)
+                                */
+                            mPostsArray.put(i, post);
+                                /*
+                                Info that will be displayed on UI.
+                                Considering only the post date and the title
+                                */
+                            if (post.getDate() != null) {
+                                String date = formatDate(
+                                        post.getDate(), JSON_SERVER_DATE_FORMAT, UI_DATE_FORMAT);
+                                itemsList.add(date + "\n" + post.getTitle());
+                            } else {
+                                Log.e(TAG, "Unable to retrieve the Post date");
+                            }
+                        } else {
+                            Log.e(TAG, "Error while retrieving current Author info");
+                        }
                     } else {
-                        Log.e(TAG, "Unable to retrieve the Post date");
+                        Log.e(TAG, "jsonObject is NULL");
                     }
-                } else {
-                    Log.e(TAG, "Error while retrieving current Author info");
+                } catch(JSONException e){
+                    e.printStackTrace();
                 }
-            } catch (JSONException e) {
-                e.printStackTrace();
             }
+        } else {
+            Log.e(TAG, "jsonArray is NULL or Empty");
         }
         return itemsList;
     }
@@ -175,6 +183,7 @@ public class PostsActivity extends ActivityBase {
             retrieveSetting(key);
             /* Perform a special action depending on the setting that has changed */
             switch (key) {
+                case SettingsActivity.PREF_POSTS_SUB_PAGE_KEY:
                 case SettingsActivity.PREF_MAX_NUM_POSTS_PER_PAGE_KEY:
                     /*
                     Re-creating again the list of Posts with the new pagination, as if we were
@@ -206,6 +215,12 @@ public class PostsActivity extends ActivityBase {
         if (PREFERENCES_KEYS.contains(key)) {
             if (VDBG) Log.d(TAG, "retrieveSetting key=" + key);
             switch (key) {
+                case SettingsActivity.PREF_POSTS_SUB_PAGE_KEY:
+                    mSubPagePref = mSharedPreferences.getString(
+                            SettingsActivity.PREF_POSTS_SUB_PAGE_KEY,
+                            SettingsActivity.PREF_POSTS_SUB_PAGE_DEFAULT);
+                    if (DBG) Log.d(TAG, "SubPage=" + mSubPagePref);
+                    break;
                 case SettingsActivity.PREF_MAX_NUM_POSTS_PER_PAGE_KEY:
                     mMaxNumItemsPerPagePref = mSharedPreferences.getString(
                             SettingsActivity.PREF_MAX_NUM_POSTS_PER_PAGE_KEY,
@@ -235,6 +250,15 @@ public class PostsActivity extends ActivityBase {
         return id;
     }
 
+    protected void handleDataRetrievalError() {
+        if (VDBG) Log.d(TAG, "handleDataRetrievalError");
+        if (mPostsArray != null) {
+            mPostsArray.clear();
+        }
+        mIsInfoUnavailable = true;
+        setErrorMessage();
+    }
+
     protected Intent createTransitionIntent(int position) {
         if (VDBG) Log.d(TAG, "createTransitionIntent position=" + position);
         Intent intent = null;
@@ -254,7 +278,7 @@ public class PostsActivity extends ActivityBase {
         if (requestUrl != null && !requestUrl.isEmpty()) {
             retrieveItemsList(requestUrl);
         } else {
-            Log.e(TAG, "invalid request URL");
+            Log.e(TAG, "Unable to retrieve the request URL");
         }
     }
 
@@ -268,12 +292,14 @@ public class PostsActivity extends ActivityBase {
         if (VDBG) Log.d(TAG, "computeFirstRequestUrl AuthorId=" + authorId);
         String requestUrl = null;
         if (authorId != null && !authorId.isEmpty()) {
-            StringBuilder requestUrlSb = new StringBuilder(GET_FIRST_PAGE);
-            if (DBG) Log.d(TAG, "Initial URL is " + requestUrlSb);
-            addUrlParam(requestUrlSb, AUTHOR_ID_ATTR_KEY, authorId);
-            addUrlParam(requestUrlSb, SORT_RESULTS_ACTION_KEY, SORTING_ATTRIBUTES);
-            addUrlParam(requestUrlSb, ORDER_RESULTS_ACTION_KEY, ORDERING_METHODS);
-            addUrlParam(requestUrlSb, LIMIT_NUM_RESULTS_ACTION_KEY, mMaxNumItemsPerPagePref);
+            String url = mWebServerUrlPref + "/" + mSubPagePref + "?" +
+                    UrlParams.GET_PAGE_NUM + "=1";
+            if (DBG) Log.d(TAG, "Initial URL is " + url);
+            StringBuilder requestUrlSb = new StringBuilder(url);
+            addUrlParam(requestUrlSb, UrlParams.AUTHOR_ID, authorId);
+            addUrlParam(requestUrlSb, UrlParams.SORT_RESULTS, SORTING_ATTRIBUTES);
+            addUrlParam(requestUrlSb, UrlParams.ORDER_RESULTS, ORDERING_METHODS);
+            addUrlParam(requestUrlSb, UrlParams.LIMIT_NUM_RESULTS, mMaxNumItemsPerPagePref);
             requestUrl = requestUrlSb.toString();
         } else {
             Log.e(TAG, "author id is NULL or empty");
@@ -281,7 +307,8 @@ public class PostsActivity extends ActivityBase {
         return requestUrl;
     }
 
-    private void setAuthorAddress(String latitude, String longitude) {
+    private void setAuthorAddress(TextView authorAddressTextView,
+                                  String latitude, String longitude) {
         if (VDBG) Log.d(TAG,
                 "setAuthorAddress Latitude=" + latitude + ", Longitude=" + longitude);
         if (latitude != null && !latitude.isEmpty() &&
@@ -302,9 +329,9 @@ public class PostsActivity extends ActivityBase {
                     //String state = addresses.get(0).getAdminArea();
                     String country = addresses.get(0).getCountryName();
                     if (country != null && !country.isEmpty()) {
-                        mAuthorAddressTextView.setText("(" + country + ")");
+                        authorAddressTextView.setText("(" + country + ")");
                     } else {
-                        // Not an error, since this info could be not available for an author
+                        /* Not an error, since this info could be not available for an author */
                         if (VDBG) Log.d(TAG, "Author country not available");
                     }
                 } else {

@@ -15,7 +15,7 @@
     <TableLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
+        android:layout_marginTop="8dp"
         android:shrinkColumns="*"
         android:stretchColumns="*">
 
@@ -27,16 +27,16 @@
                 android:id="@+id/itemsListContent"
                 android:layout_width="0dp"
                 android:layout_height="300dp"
-                android:layout_weight="1"
                 android:layout_column="0"
-                android:background="#DFD4D4"/>
+                android:layout_weight="1"
+                android:background="#D8D3B1" />
 
         </TableRow>
 
         <TableRow
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="5dp">
+            android:layout_marginTop="8dp">
 
             <TextView
                 android:id="@+id/pageCounters"

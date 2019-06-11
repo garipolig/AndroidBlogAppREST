@@ -10,25 +10,27 @@ import com.android.volley.toolbox.ImageLoader;
 import com.android.volley.toolbox.Volley;
 import com.android.volley.Request;
 
-public class RequestUtils {
+public class NetworkRequestUtils {
 
-    private static final String TAG = "RequestUtils";
+    private static final String TAG = "NetworkRequestUtils";
     private static final boolean DBG = ActivityBase.DBG;
     private static final boolean VDBG = ActivityBase.VDBG;
 
-    private static RequestUtils INSTANCE;
-    private RequestQueue mRequestQueue;
-    private ImageLoader mImageLoader;
-    private static Context mContext;
+    private static final int MAX_NUM_ENTRIES_IN_CACHE = 20;
 
-    private RequestUtils(Context context) {
+    private static NetworkRequestUtils INSTANCE;
+    private RequestQueue mRequestQueue;
+    private final ImageLoader mImageLoader;
+    private final Context mContext;
+
+    private NetworkRequestUtils(Context context) {
         mContext = context;
         mRequestQueue = getRequestQueue();
 
         mImageLoader = new ImageLoader(mRequestQueue,
                 new ImageLoader.ImageCache() {
             private final LruCache<String, Bitmap>
-                    cache = new LruCache<String, Bitmap>(20);
+                    cache = new LruCache<>(MAX_NUM_ENTRIES_IN_CACHE);
 
             @Override
             public Bitmap getBitmap(String url) {
@@ -44,10 +46,10 @@ public class RequestUtils {
         });
     }
 
-    public static synchronized RequestUtils getInstance(Context context) {
+    public static synchronized NetworkRequestUtils getInstance(Context context) {
         if (VDBG) Log.d(TAG, "getInstance");
         if (INSTANCE == null) {
-            INSTANCE = new RequestUtils(context);
+            INSTANCE = new NetworkRequestUtils(context);
         }
         return INSTANCE;
     }
@@ -63,6 +65,11 @@ public class RequestUtils {
     public <T> void addToRequestQueue(Request<T> req) {
         if (VDBG) Log.d(TAG, "addToRequestQueue");
         getRequestQueue().add(req);
+    }
+
+    public void cancelAllRequests(String tag) {
+        if (VDBG) Log.d(TAG, "cancelAllRequests for TAG=" + tag);
+        getRequestQueue().cancelAll(tag);
     }
 
     public ImageLoader getImageLoader() {

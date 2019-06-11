@@ -8,30 +8,36 @@
     <string name="posts_list">List of Posts</string>
     <string name="comments_list">List of Comments</string>
     <string name="button_first_page">First Page</string>
-    <string name="button_prev_page">Previous Page</string>
+    <string name="button_prev_page">Prev Page</string>
     <string name="button_next_page">Next Page</string>
     <string name="button_last_page">Last Page</string>
     <string name="error_message">unable to retrieve data</string>
+    <string name="cover_image_desc">Cover Image</string>
+    <string name="page">Page</string>
 
     <!-- Preference Titles -->
     <string name="general_prefs_header">General</string>
-    <string name="author_prefs_header">Authors Page</string>
-    <string name="posts_prefs_header">Posts Page</string>
-    <string name="comments_prefs_header">Comments Page</string>
+    <string name="author_prefs_header">Authors</string>
+    <string name="posts_prefs_header">Posts</string>
+    <string name="comments_prefs_header">Comments</string>
 
-    <!-- Auto-Refresh Preferences -->
+    <!-- General Preferences -->
+    <string name="web_server_url_title">Web Server URL</string>
     <string name="auto_refresh_title">Auto-Refresh</string>
     <string name="auto_refresh_summary_on">Refresh when network becomes available. Performed
         only if data retrieval has failed previously</string>
     <string name="auto_refresh_summary_off">Refresh only when manually requested</string>
 
     <!-- Authors Page Preferences -->
+    <string name="authors_sub_page_title">Web Server Sub Page</string>
     <string name="max_num_authors_per_page_title">Max number of lines/page</string>
 
     <!-- Posts Page Preferences -->
+    <string name="posts_sub_page_title">Web Server Sub Page</string>
     <string name="max_num_posts_per_page_title">Max number of lines/page</string>
 
     <!-- Comments Page Preferences -->
+    <string name="comments_sub_page_title">Web Server Sub Page</string>
     <string name="max_num_comments_per_page_title">Max number of lines/page</string>
 
 </resources>

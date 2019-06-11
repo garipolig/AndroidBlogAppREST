@@ -64,12 +64,12 @@ public class Post implements Parcelable {
     public Post(JSONObject jsonObject) {
         if (jsonObject != null) {
             try {
-                mId = jsonObject.getString(ActivityBase.ID_ATTR_KEY);
-                mDate = jsonObject.getString(ActivityBase.DATE_ATTR_KEY);
-                mTitle = jsonObject.getString(ActivityBase.TITLE_ATTR_KEY);
-                mBody = jsonObject.getString(ActivityBase.BODY_ATTR_KEY);
-                mImageUrl = jsonObject.getString(ActivityBase.IMAGE_URL_ATTR_KEY);
-                mAuthorId = jsonObject.getString(ActivityBase.AUTHOR_ID_ATTR_KEY);
+                mId = jsonObject.getString(UrlParams.ID);
+                mDate = jsonObject.getString(UrlParams.DATE);
+                mTitle = jsonObject.getString(UrlParams.TITLE);
+                mBody = jsonObject.getString(UrlParams.BODY);
+                mImageUrl = jsonObject.getString(UrlParams.IMAGE_URL);
+                mAuthorId = jsonObject.getString(UrlParams.AUTHOR_ID);
             } catch (JSONException e) {
                 e.printStackTrace();
             }

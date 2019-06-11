@@ -18,18 +18,18 @@
 
             <com.android.volley.toolbox.NetworkImageView
                 android:id="@+id/postImage"
-                android:layout_width="100dp"
-                android:layout_height="100dp"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
                 android:layout_column="0"/>
 
             <ScrollView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_width="200dp"
+                android:layout_height="100dp"
                 android:layout_column="1">
 
                 <TextView
                     android:id="@+id/postBody"
-                    android:layout_width="200dp"
+                    android:layout_width="match_parent"
                     android:layout_height="100dp" />
             </ScrollView>
 

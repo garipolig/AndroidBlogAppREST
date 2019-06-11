@@ -29,7 +29,7 @@ public class Author implements Parcelable {
     private String mUserName;
     private String mEmail;
     private String mAvatarUrl;
-    // Latitude and Longitude
+    /* Latitude and Longitude */
     private String[] mAddressCoordinates;
 
 
@@ -57,8 +57,8 @@ public class Author implements Parcelable {
         dest.writeString(mEmail);
         dest.writeString(mAvatarUrl);
         dest.writeInt(mAddressCoordinates.length);
-        for(int i=0; i < mAddressCoordinates.length; i++ ){
-            dest.writeString(mAddressCoordinates[i]);
+        for (String coordinate: mAddressCoordinates) {
+            dest.writeString(coordinate);
         }
     }
 
@@ -70,7 +70,7 @@ public class Author implements Parcelable {
         mAvatarUrl = in.readString();
         int size = in.readInt();
         mAddressCoordinates = new String[size];
-        for(int i=0; i < size; i++ ){
+        for(int i=0; i < size; i++){
             mAddressCoordinates[i] = in.readString();
         }
     }
@@ -78,19 +78,19 @@ public class Author implements Parcelable {
     public Author(JSONObject jsonObject) {
         if (jsonObject != null) {
             try {
-                mId = jsonObject.getString(ActivityBase.ID_ATTR_KEY);
-                mName = jsonObject.getString(ActivityBase.NAME_ATTR_KEY);
-                mUserName = jsonObject.getString(ActivityBase.USERNAME_ATTR_KEY);
-                mEmail = jsonObject.getString(ActivityBase.EMAIL_ATTR_KEY);
-                mAvatarUrl = jsonObject.getString(ActivityBase.AVATAR_URL_ATTR_KEY);
+                mId = jsonObject.getString(UrlParams.ID);
+                mName = jsonObject.getString(UrlParams.NAME);
+                mUserName = jsonObject.getString(UrlParams.USERNAME);
+                mEmail = jsonObject.getString(UrlParams.EMAIL);
+                mAvatarUrl = jsonObject.getString(UrlParams.AVATAR_URL);
                 JSONObject jsonObjectAddress =
-                        jsonObject.getJSONObject(ActivityBase.ADDRESS_ATTR_KEY);
+                        jsonObject.getJSONObject(UrlParams.ADDRESS);
                 if (jsonObjectAddress != null) {
                     mAddressCoordinates = new String[2];
                     mAddressCoordinates[LATITUDE_ARRAY_INDEX] =
-                            jsonObjectAddress.getString(ActivityBase.ADDRESS_LAT_ATTR_KEY);
+                            jsonObjectAddress.getString(UrlParams.ADDRESS_LAT);
                     mAddressCoordinates[LONGITUDE_ARRAY_INDEX] =
-                            jsonObjectAddress.getString(ActivityBase.ADDRESS_LONG_ATTR_KEY);
+                            jsonObjectAddress.getString(UrlParams.ADDRESS_LONG);
                 } else {
                     Log.e(TAG, "unable to retrieve the author address");
                 }

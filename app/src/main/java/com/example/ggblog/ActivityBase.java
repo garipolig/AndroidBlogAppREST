@@ -20,17 +20,16 @@ import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import com.android.volley.NetworkResponse;
 import com.android.volley.ParseError;
 import com.android.volley.Request;
-import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.HttpHeaderParser;
-import com.android.volley.toolbox.ImageLoader;
 import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.NetworkImageView;
 
@@ -52,81 +51,65 @@ import java.util.regex.Pattern;
 public abstract class ActivityBase extends AppCompatActivity {
 
     private static final String TAG = "ActivityBase";
-    public static final boolean DBG = true;
-    public static final boolean VDBG = true;
-    //public static final boolean DBG = Log.isLoggable(TAG, Log.DEBUG);
-    //public static final boolean VDBG = Log.isLoggable(TAG, Log.VERBOSE);
+    public static final boolean DBG = Log.isLoggable(TAG, Log.DEBUG);
+    public static final boolean VDBG = Log.isLoggable(TAG, Log.VERBOSE);
 
-    public static final String EXTRA_MESSAGE =
-            "com.example.ggblog.extra.MESSAGE";
+    protected static final String EXTRA_MESSAGE = "com.example.ggblog.extra.MESSAGE";
 
-    public static final String EXTRA_EXIT =
-            "com.example.ggblog.extra.EXIT";
+    protected static final String EXTRA_EXIT = "com.example.ggblog.extra.EXIT";
 
-    private static final String CONNECTIVITY_CHANGE_ACTION =
-            "android.net.conn.CONNECTIVITY_CHANGE";
+    private static final String CONNECTIVITY_CHANGE_ACTION = "android.net.conn.CONNECTIVITY_CHANGE";
 
     private static final String FIRST_PAGE = "first";
     private static final String PREV_PAGE = "prev";
     private static final String NEXT_PAGE = "next";
     private static final String LAST_PAGE = "last";
 
-    /* Page link is between "<" and ">" in the Response Header*/
+    /*
+    Page links are between "<" and ">" in the Response Header, like the following example:
+    Link=
+    <http://sym-json-server.herokuapp.com/authors?_page=1&_sort=name&_order=asc&_limit=20>;
+    rel="first",
+    <http://sym-json-server.herokuapp.com/authors?_page=2&_sort=name&_order=asc&_limit=20>;
+    rel="next",
+    <http://sym-json-server.herokuapp.com/authors?_page=13&_sort=name&_order=asc&_limit=20>;
+    rel="last"
+    */
     private static final String PAGE_LINK_REGEXP = "<([^\"]*)>";
-    /* Page rel (first, next, prev, last) is around " " on the Page Link section */
-    private static final String PAGE_REL_REGEXP = "\"([^\"]*)\"";
-    /* Page number is between "page=" and ">" or "&" (depends on the position of the param in URL)*/
+    /* Page rel (first, next, prev, last) is in rel="[PAGE REL]" on the Page Link section */
+    private static final String PAGE_REL_REGEXP = "rel=\"([^\"]*)\"";
+    /*
+    Page number is in page=[PAGE NUMBER]> or page=[PAGE NUMBER]&
+    It will depends on the position of the page parameter in URL (at the end or not)
+    */
     private static final String PAGE_NUM_REGEXP = "page=([0-9]*)&";
 
-    public static final String ID_ATTR_KEY = "id";
-    public static final String AUTHOR_ID_ATTR_KEY = "authorId";
-    public static final String POST_ID_ATTR_KEY = "postId";
-    public static final String NAME_ATTR_KEY = "name";
-    public static final String USERNAME_ATTR_KEY = "userName";
-    public static final String EMAIL_ATTR_KEY = "email";
-    public static final String AVATAR_URL_ATTR_KEY = "avatarUrl";
-    public static final String ADDRESS_ATTR_KEY = "address";
-    public static final String ADDRESS_LAT_ATTR_KEY = "latitude";
-    public static final String ADDRESS_LONG_ATTR_KEY = "longitude";
-    public static final String DATE_ATTR_KEY = "date";
-    public static final String TITLE_ATTR_KEY = "title";
-    public static final String BODY_ATTR_KEY = "body";
-    public static final String IMAGE_URL_ATTR_KEY = "imageUrl";
-
-    public static final String LINK_ATTR_KEY = "Link";
-
-    protected static final String GET_PAGE_NUM_ACTION_KEY = "_page";
-    protected static final String LIMIT_NUM_RESULTS_ACTION_KEY = "_limit";
-    protected static final String SORT_RESULTS_ACTION_KEY = "_sort";
-    protected static final String ORDER_RESULTS_ACTION_KEY = "_order";
-
-    protected static final String ORDERING_METHOD_ASC = "asc";
-    protected static final String ORDERING_METHOD_DESC = "desc";
-
-    protected static final String JSON_SERVER_URL = "http://sym-json-server.herokuapp.com";
+    /* The format of the dates received in JSON */
     protected static final String JSON_SERVER_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
+    /* The format to be used for displaying in UI */
     protected static final String UI_DATE_FORMAT = "dd.MM.yyyy 'at' HH:mm:ss z" ;
 
     protected static final Class<?> MAIN_ACTIVITY = MainActivity.class;
 
     /*
-    The SharedPreferences in common for all the Activities.
-    Keeping it as a Set collection for future extensions
+    SharedPreferences in common for all the Activities
     */
     private static final Set<String> PREFERENCES_KEYS =
-            new HashSet<String>(Arrays.asList(new String[] {
+            new HashSet<>(Arrays.asList(
+                    SettingsActivity.PREF_WEB_SERVER_URL_KEY,
                     SettingsActivity.PREF_AUTO_REFRESH_KEY
-            }));
+            ));
 
     private NetworkChangeReceiver mNetworkChangeReceiver;
     protected SharedPreferences mSharedPreferences;
 
     /* Those preference are set through settings (shared preferences) */
-    protected boolean mIsAutoRefreshEnabledPref;
+    protected String mWebServerUrlPref;
+    protected String mSubPagePref;
+    private boolean mIsAutoRefreshEnabledPref;
     protected String mMaxNumItemsPerPagePref;
 
     private TextView mPageCountersTextView;
-    private TextView mItemsListTitleTextView;
     protected ListView mItemsListContentListView;
     private Button mFirstPageButton;
     private Button mPrevPageButton;
@@ -149,7 +132,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     private String mLastPageUrlRequest;
 
     /* True when we are not able to retrieve data from server */
-    private boolean mIsInfoUnavailable;
+    protected boolean mIsInfoUnavailable;
 
     /*
     Needing a Custom JsonArrayRequest, to retrieve the Link from header, which is not
@@ -158,8 +141,8 @@ public abstract class ActivityBase extends AppCompatActivity {
     the Link is needed to retrieve the URL Requests to be used to move from the current page
     to the first/previous/next/last
     */
-    public class CustomJsonArrayRequest extends JsonArrayRequest {
-        private String mRequestedUrl;
+    private class CustomJsonArrayRequest extends JsonArrayRequest {
+        private final String mRequestedUrl;
 
         public CustomJsonArrayRequest(String url, Response.Listener
                 <JSONArray> listener, Response.ErrorListener errorListener) {
@@ -167,8 +150,8 @@ public abstract class ActivityBase extends AppCompatActivity {
             mRequestedUrl = url;
         }
 
-        public CustomJsonArrayRequest(int method, String url, JSONArray jsonRequest, Response.Listener
-                <JSONArray> listener, Response.ErrorListener errorListener) {
+        public CustomJsonArrayRequest(int method, String url, JSONArray jsonRequest,
+                Response.Listener<JSONArray> listener, Response.ErrorListener errorListener) {
             super(method, url, jsonRequest, listener, errorListener);
             mRequestedUrl = url;
         }
@@ -180,33 +163,48 @@ public abstract class ActivityBase extends AppCompatActivity {
                 String jsonStringData = new String(response.data,
                         HttpHeaderParser.parseCharset(response.headers, PROTOCOL_CHARSET));
                 if(VDBG) Log.d(TAG, "Full Header: " + response.headers);
-                String jsonStringHeaderLink = response.headers.get(LINK_ATTR_KEY);
+                String jsonStringHeaderLink = response.headers.get(UrlParams.LINK);
                 if(VDBG) Log.d(TAG, "Header Link: " + jsonStringHeaderLink);
+                /*
+                The Header link contains al list of elements like that:
+                <http://sym-json-server.herokuapp.com/authors?_page=1>; rel="xxx"
+                We need to extract the pageLink (value between <> and the associated
+                pageRel (value in rel="xxx")
+                */
                 mCurrentPageUrlRequest = mRequestedUrl;
-                /* Page link is placed between <> */
                 Pattern patternPageLink = Pattern.compile(PAGE_LINK_REGEXP);
                 Matcher matcherPageLink = patternPageLink.matcher(jsonStringHeaderLink);
-                /* Page rel (first, next, prev, last) is placed around "" */
                 Pattern patternPageRel = Pattern.compile(PAGE_REL_REGEXP);
                 Matcher matcherPageRel = patternPageRel.matcher(jsonStringHeaderLink);
+                /* For each PageLink we retrieve the associated PageRel */
                 while(matcherPageLink.find()) {
                     String currPageLink = matcherPageLink.group(1);
-                    if(VDBG) Log.d(TAG, "PageLink: " + currPageLink);
-                    matcherPageRel.find();
-                    String currPageRel = matcherPageRel.group(1);
-                    if(VDBG) Log.d(TAG, "PageRel: " + currPageRel);
-                    if (currPageRel.equals(FIRST_PAGE)) {
-                        mFirstPageUrlRequest = currPageLink;
-                    } else if (currPageRel.equals(PREV_PAGE)) {
-                        mPrevPageUrlRequest = currPageLink;
-                    } else if (currPageRel.equals(NEXT_PAGE)) {
-                        mNextPageUrlRequest = currPageLink;
-                    }  else if (currPageRel.equals(LAST_PAGE)) {
-                        mLastPageUrlRequest = currPageLink;
+                    if (VDBG) Log.d(TAG, "PageLink: " + currPageLink);
+                    if (matcherPageRel.find()) {
+                        String currPageRel = matcherPageRel.group(1);
+                        if (VDBG) Log.d(TAG, "PageRel: " + currPageRel);
+                        if (currPageRel != null) {
+                            switch (currPageRel) {
+                                case FIRST_PAGE:
+                                    mFirstPageUrlRequest = currPageLink;
+                                    break;
+                                case PREV_PAGE:
+                                    mPrevPageUrlRequest = currPageLink;
+                                    break;
+                                case NEXT_PAGE:
+                                    mNextPageUrlRequest = currPageLink;
+                                    break;
+                                case LAST_PAGE:
+                                    mLastPageUrlRequest = currPageLink;
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
                     }
                 }
-                return Response.success(
-                        new JSONArray(jsonStringData), HttpHeaderParser.parseCacheHeaders(response));
+                return Response.success(new JSONArray(
+                        jsonStringData), HttpHeaderParser.parseCacheHeaders(response));
             } catch (UnsupportedEncodingException e) {
                 return Response.error(new ParseError(e));
             } catch (JSONException je) {
@@ -219,7 +217,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     Needed to listen for changes in the Settings
     At the moment we handle only the auto-refresh option, but we can add more options in the future
     */
-    private SharedPreferences.OnSharedPreferenceChangeListener mSharedPreferenceListener =
+    private final SharedPreferences.OnSharedPreferenceChangeListener mSharedPreferenceListener =
             new SharedPreferences.OnSharedPreferenceChangeListener() {
         public void onSharedPreferenceChanged(SharedPreferences preference, String key) {
             if (VDBG) Log.d(TAG, "onSharedPreferenceChanged " + key);
@@ -254,6 +252,11 @@ public abstract class ActivityBase extends AppCompatActivity {
     protected abstract String getSelectedItemId(int position);
 
     /*
+    Each Activity knows how to handle the unsuccessful data retrieval from server
+    */
+    protected abstract void handleDataRetrievalError();
+
+    /*
     Each Activity knows which is the Next Activity when clicking on a specific item to have
     more details (e.g. From Authors List to Author Details).
     The correct Intent with the related content needs to be created
@@ -262,8 +265,10 @@ public abstract class ActivityBase extends AppCompatActivity {
 
     /* Title to be displayed on top of the Table */
     protected abstract String getListTitle();
+
     /* Information to be displayed on the Table (listing the authors, posts, comments...) */
     protected abstract ArrayList<String> getInfoToDisplayOnTable(JSONArray jsonArray);
+
     /*
     Each activity perform the request to the Web Server using a specific TAG, to be able to cancel
     the ongoing requests when not yet sent to the network
@@ -275,84 +280,87 @@ public abstract class ActivityBase extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate");
         mIsInfoUnavailable = false;
-        registerSharedPreferencesListener();
-        registerNetworkChangeReceiver();
         setContentView(getContentView());
         Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        mPageCountersTextView = (TextView) findViewById(R.id.pageCounters);
-        mItemsListTitleTextView = (TextView) findViewById(R.id.itemsListTitle);
-        /* Each Activity will have a different implementation of getListTitle() */
-        mItemsListTitleTextView.setText(getListTitle());
-        mItemsListContentListView = (ListView)findViewById(R.id.itemsListContent);
-        mItemsListContentListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            public void onItemClick(AdapterView<?> parent, final View view,
-            int position, long id) {
-                if(VDBG) Log.d(TAG, "onItemClick position=" + position + ", id=" + id);
-                RequestQueue queue = RequestUtils.getInstance(
-                        getApplicationContext()).getRequestQueue();
-                /*
-                Cancel any ongoing request to retrieve a new items (authors, posts, comments...),
-                since we are switching to a new page (e.g. from Authors List to Post List).
-                */
-                if (queue != null) {
-                    queue.cancelAll(getRequestTag());
-                }
-                String itemId = getSelectedItemId(position);
-                if(DBG) Log.d(TAG, "Selected ID " + itemId);
-                if (itemId != null) {
-                    /* Open a new activity (the intent will depend on the implementation of each page) */
-                    Intent intent = createTransitionIntent(position);
-                    if (intent != null) {
-                        startActivity(intent);
+        mPageCountersTextView = findViewById(R.id.pageCounters);
+        TextView itemsListTitleTextView = findViewById(R.id.itemsListTitle);
+        mItemsListContentListView = findViewById(R.id.itemsListContent);
+        mFirstPageButton = findViewById(R.id.buttonFirstPage);
+        mPrevPageButton = findViewById(R.id.buttonPrevPage);
+        mNextPageButton = findViewById(R.id.buttonNextPage);
+        mLastPageButton = findViewById(R.id.buttonLastPage);
+        if (toolbar != null && mPageCountersTextView != null && itemsListTitleTextView != null &&
+                mItemsListContentListView != null && mFirstPageButton != null &&
+                mPrevPageButton != null && mNextPageButton != null && mLastPageButton != null) {
+            registerSharedPreferencesListener();
+            registerNetworkChangeReceiver();
+            setSupportActionBar(toolbar);
+            /* Each Activity will have a different implementation of getListTitle() */
+            itemsListTitleTextView.setText(getListTitle());
+            mItemsListContentListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                public void onItemClick(AdapterView<?> parent, final View view,
+                                        int position, long id) {
+                    if (VDBG) Log.d(TAG, "onItemClick position=" + position + ", id=" + id);
+                    /*
+                    Cancel any ongoing request to retrieve a new items (authors, posts, comments...),
+                    since we are switching to a new page (e.g. from Authors List to Post List).
+                    */
+                    NetworkRequestUtils.getInstance(getApplicationContext()).cancelAllRequests(
+                            getRequestTag());
+                    String itemId = getSelectedItemId(position);
+                    if (DBG) Log.d(TAG, "Selected ID " + itemId);
+                    if (itemId != null) {
+                        /* Open a new activity (the intent will depend on the implementation of each page) */
+                        Intent intent = createTransitionIntent(position);
+                        if (intent != null) {
+                            startActivity(intent);
+                        } else {
+                            Log.e(TAG, "intent is NULL");
+                        }
                     } else {
-                        Log.e(TAG, "created intent is NULL");
+                        Log.e(TAG, "unable to retrieve the selected item ID");
                     }
-                } else {
-                    Log.e(TAG, "unable to retrieve the selected item ID");
                 }
-            }
-        });
-        mFirstPageButton = (Button) findViewById(R.id.buttonFirstPage);
-        mFirstPageButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(VDBG) Log.d(TAG, "onClick");
-                if (mFirstPageUrlRequest != null) {
-                    retrieveItemsList(mFirstPageUrlRequest);
+            });
+            mFirstPageButton.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (VDBG) Log.d(TAG, "onClick");
+                    if (mFirstPageUrlRequest != null) {
+                        retrieveItemsList(mFirstPageUrlRequest);
+                    }
                 }
-            }
-        });
-        mPrevPageButton = (Button) findViewById(R.id.buttonPrevPage);
-        mPrevPageButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(VDBG) Log.d(TAG, "onClick");
-                if (mPrevPageUrlRequest != null) {
-                    retrieveItemsList(mPrevPageUrlRequest);
+            });
+            mPrevPageButton.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (VDBG) Log.d(TAG, "onClick");
+                    if (mPrevPageUrlRequest != null) {
+                        retrieveItemsList(mPrevPageUrlRequest);
+                    }
                 }
-            }
-        });
-        mNextPageButton = (Button) findViewById(R.id.buttonNextPage);
-        mNextPageButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(VDBG) Log.d(TAG, "onClick");
-                if (mNextPageUrlRequest != null) {
-                    retrieveItemsList(mNextPageUrlRequest);
+            });
+            mNextPageButton.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (VDBG) Log.d(TAG, "onClick");
+                    if (mNextPageUrlRequest != null) {
+                        retrieveItemsList(mNextPageUrlRequest);
+                    }
                 }
-            }
-        });
-        mLastPageButton = (Button) findViewById(R.id.buttonLastPage);
-        mLastPageButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(VDBG) Log.d(TAG, "onClick");
-                if (mLastPageUrlRequest != null) {
-                    retrieveItemsList(mLastPageUrlRequest);
+            });
+            mLastPageButton.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (VDBG) Log.d(TAG, "onClick");
+                    if (mLastPageUrlRequest != null) {
+                        retrieveItemsList(mLastPageUrlRequest);
+                    }
                 }
-            }
-        });
+            });
+        } else {
+            Log.e(TAG, "An error occurred while retrieving layout elements");
+        }
     }
 
     @Override
@@ -363,7 +371,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (VDBG) Log.d(TAG, "onOptionsItemSelected");
         /*
         Handle action bar item clicks here. The action bar will automatically handle clicks on
@@ -390,7 +398,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     }
 
     protected void retrieveItemsList(String url) {
-        if (VDBG) Log.d(TAG, "retrieveItemsList");
+        if (VDBG) Log.d(TAG, "retrieveItemsList URL=" + url);
         if (url != null && !url.isEmpty()) {
             if (VDBG) Log.d(TAG, "URL=" + url);
             mLastUrlRequestSentToServer = url;
@@ -403,13 +411,11 @@ public abstract class ActivityBase extends AppCompatActivity {
             mPrevPageUrlRequest = null;
             mNextPageUrlRequest = null;
             mLastPageUrlRequest = null;
-            RequestQueue queue = RequestUtils.getInstance(
-                    this.getApplicationContext()).getRequestQueue();
             CustomJsonArrayRequest jsonArrayRequest = new CustomJsonArrayRequest
                     (Request.Method.GET, url, null, new Response.Listener<JSONArray>() {
                 @Override
                 public void onResponse(JSONArray response) {
-                    if (DBG) Log.d(TAG, "Response: " + response.toString());
+                    if (DBG) Log.d(TAG, "Response: " + response);
                     ArrayList<String> infoToDisplay = getInfoToDisplayOnTable(response);
                     if (infoToDisplay != null && !infoToDisplay.isEmpty()) {
                         mIsInfoUnavailable = false;
@@ -417,25 +423,24 @@ public abstract class ActivityBase extends AppCompatActivity {
                         updateAvailableButtons(false);
                     } else {
                         Log.e(TAG, "unable to retrieve the info to display");
-                        mIsInfoUnavailable = true;
-                        setErrorMessage();
+                        handleDataRetrievalError();
                         updateAvailableButtons(true);
                     }
-                    udpatePageCounters();
+                    updatePageCounters();
                 }
             }, new Response.ErrorListener() {
                 @Override
                 public void onErrorResponse(VolleyError error) {
                     Log.e(TAG, "Error while retrieving data from server");
-                    mIsInfoUnavailable = true;
-                    setErrorMessage();
+                    handleDataRetrievalError();
                     updateAvailableButtons(true);
-                    udpatePageCounters();
+                    updatePageCounters();
                 }
             });
             /* Add the request to the RequestQueue */
             jsonArrayRequest.setTag(getRequestTag());
-            queue.add(jsonArrayRequest);
+            NetworkRequestUtils.getInstance(this.getApplicationContext()).addToRequestQueue(
+                    jsonArrayRequest);
         } else {
             Log.e(TAG, "URL null or empty");
         }
@@ -468,7 +473,7 @@ public abstract class ActivityBase extends AppCompatActivity {
                 Date dateToFormat = dateFormatter.parse(date);
                 if (dateToFormat != null) {
                     dateFormatter = new SimpleDateFormat(newPattern, Locale.getDefault());
-                    formattedDate = dateFormatter.format(dateToFormat).toString();
+                    formattedDate = dateFormatter.format(dateToFormat);
                 } else {
                     Log.e(TAG, "Unable to format date coming from JSON Server");
                 }
@@ -489,59 +494,65 @@ public abstract class ActivityBase extends AppCompatActivity {
     }
 
     protected void setImage(String url, NetworkImageView networkImageView) {
-        if (VDBG) Log.d(TAG, "setImage");
+        if (VDBG) Log.d(TAG, "setImage URL=" + url);
         if (url != null && !url.isEmpty()) {
             if (networkImageView != null) {
-                ImageLoader imageLoader = RequestUtils.getInstance(
-                        this.getApplicationContext()).getImageLoader();
-                if (imageLoader != null) {
-                    networkImageView.setImageUrl(url, imageLoader);
-                } else {
-                    Log.e(TAG, "unable to retrieve the ImageLoader");
-                }
+                networkImageView.setImageUrl(url, NetworkRequestUtils.getInstance(
+                        this.getApplicationContext()).getImageLoader());
             } else {
                 Log.e(TAG, "unable to retrieve the networkImageView");
             }
         } else {
-            if (VDBG) Log.d(TAG, "Author avatar N/A");
+            if (VDBG) Log.d(TAG, "Imaged N/A");
         }
     }
 
     private void updateListView(ArrayList<String> itemsList) {
         if (VDBG) Log.d(TAG, "updateListView");
         ArrayAdapter<String> listAdapter =
-                new ArrayAdapter<String>(getApplicationContext(), R.layout.simple_row, itemsList);
+                new ArrayAdapter<>(getApplicationContext(), R.layout.simple_row, itemsList);
         mItemsListContentListView.setAdapter(listAdapter);
     }
 
-    private void udpatePageCounters() {
-        if (VDBG) Log.d(TAG, "udpatePageCounters currPageUrl=" + mCurrentPageUrlRequest +
+    /*
+    Note that the lastPageRequestUrl=null (server doesn't send it) when we have only 1 page
+    currentPageRequestUrl cannot be null, unless a problem occurred
+    */
+    private void updatePageCounters() {
+        if (VDBG) Log.d(TAG, "updatePageCounters currPageUrl=" + mCurrentPageUrlRequest +
                 ", lastPageUrl=" + mLastPageUrlRequest);
-        if (mCurrentPageUrlRequest!= null && mLastPageUrlRequest != null) {
-            String currPageNum = null;
-            String lastPageNum = null;
+        String currPageNum = null;
+        String lastPageNum = null;
+        if (mCurrentPageUrlRequest!= null) {
             /* Extracting the page number from the URL */
             Pattern patternPageNum = Pattern.compile(PAGE_NUM_REGEXP);
             /* Current Page Number */
             Matcher matcherCurrPageNum = patternPageNum.matcher(mCurrentPageUrlRequest);
             if (matcherCurrPageNum.find()) {
                 currPageNum = matcherCurrPageNum.group(1);
-                if (VDBG) Log.d(TAG, "Current Page Num=" + currPageNum);
                 /* Last Page Number */
-                Matcher matcherLastPageNum = patternPageNum.matcher(mLastPageUrlRequest);
-                if (matcherLastPageNum.find()) {
-                    lastPageNum = matcherLastPageNum.group(1);
-                    if (VDBG) Log.d(TAG, "Last Page Num=" + lastPageNum);
+                if (mLastPageUrlRequest != null) {
+                    Matcher matcherLastPageNum = patternPageNum.matcher(mLastPageUrlRequest);
+                    if (matcherLastPageNum.find()) {
+                        lastPageNum = matcherLastPageNum.group(1);
+                    }
+                } else {
+                    /* This case occurs when we have only 1 page, so currPage=LastPage */
+                    if (VDBG) Log.d(TAG, "Only 1 page available");
+                    lastPageNum = currPageNum;
                 }
             }
             if (currPageNum != null && lastPageNum != null) {
-                mPageCountersTextView.setText("Page " + currPageNum + "/" + lastPageNum);
+                mPageCountersTextView.setText(
+                        getString(R.string.page) + " " + currPageNum + "/" + lastPageNum);
             } else {
                 mPageCountersTextView.setText("");
             }
         } else {
             mPageCountersTextView.setText("");
         }
+        if (VDBG) Log.d(TAG, "Current Page Num=" + currPageNum + ", Last Page Num=" +
+                lastPageNum);
     }
 
     private void updateAvailableButtons(boolean forceDisabling) {
@@ -601,9 +612,9 @@ public abstract class ActivityBase extends AppCompatActivity {
         }
     }
 
-    protected boolean retrieveNetworkConnectivityStatus() {
+    private boolean retrieveNetworkConnectivityStatus() {
         if (VDBG) Log.d(TAG, "retrieveNetworkConnectivityStatus");
-        Boolean isConnected = false;
+        boolean isConnected = false;
         ConnectivityManager connectivityManager =
                 (ConnectivityManager) getApplicationContext().getSystemService(
                         Context.CONNECTIVITY_SERVICE);
@@ -618,10 +629,10 @@ public abstract class ActivityBase extends AppCompatActivity {
     }
 
     /*
-    The refresh is made only if we didn't succeed to retrieve the info from server
-    and if the auto-refresh option is enabled in Settings
+    The refresh is made once the network becomes available and only if we didn't succeed  previously
+    to retrieve the info from server and if the auto-refresh option is enabled in Settings
     */
-    protected void handleAutoRefresh() {
+    private void handleAutoRefresh() {
         if (VDBG) Log.d(TAG, "handleAutoRefresh");
         if (mIsInfoUnavailable && mIsAutoRefreshEnabledPref) {
             refresh();
@@ -644,6 +655,14 @@ public abstract class ActivityBase extends AppCompatActivity {
             retrieveSetting(key);
             /* Perform a special action depending on the setting that has changed */
             switch (key) {
+                case SettingsActivity.PREF_WEB_SERVER_URL_KEY:
+                    /* Go back to main page, which will reload the data from new Web Server URL */
+                    Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                    break;
                 case SettingsActivity.PREF_AUTO_REFRESH_KEY:
                     /* Synchronously retrieve the network connectivity */
                     boolean isConnected = retrieveNetworkConnectivityStatus();
@@ -661,6 +680,12 @@ public abstract class ActivityBase extends AppCompatActivity {
         if (PREFERENCES_KEYS.contains(key)) {
             if (VDBG) Log.d(TAG, "retrieveSetting key=" + key);
             switch (key) {
+                case SettingsActivity.PREF_WEB_SERVER_URL_KEY:
+                    mWebServerUrlPref = mSharedPreferences.getString(
+                            SettingsActivity.PREF_WEB_SERVER_URL_KEY,
+                            SettingsActivity.PREF_WEB_SERVER_URL_DEFAULT);
+                    if (DBG) Log.d(TAG, "Web Server URL=" + mWebServerUrlPref);
+                    break;
                 case SettingsActivity.PREF_AUTO_REFRESH_KEY:
                     mIsAutoRefreshEnabledPref = mSharedPreferences.getBoolean(
                             SettingsActivity.PREF_AUTO_REFRESH_KEY,
@@ -678,7 +703,7 @@ public abstract class ActivityBase extends AppCompatActivity {
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         if (mSharedPreferences != null) {
             mSharedPreferences.registerOnSharedPreferenceChangeListener(mSharedPreferenceListener);
-            // Retrieving the current settings synchronously
+            /* Retrieving the current settings synchronously */
             retrieveSettings();
         } else {
             Log.e(TAG, "mSharedPreferences is NULL");
