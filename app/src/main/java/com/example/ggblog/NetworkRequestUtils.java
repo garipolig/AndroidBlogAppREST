@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.util.Log;
 import android.util.LruCache;
 
+import com.android.volley.Cache;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.ImageLoader;
 import com.android.volley.toolbox.Volley;
@@ -70,6 +71,16 @@ public class NetworkRequestUtils {
     public void cancelAllRequests(String tag) {
         if (VDBG) Log.d(TAG, "cancelAllRequests for TAG=" + tag);
         getRequestQueue().cancelAll(tag);
+    }
+
+    public void clearCache() {
+        if (VDBG) Log.d(TAG, "clearCache");
+        Cache cache = getRequestQueue().getCache();
+        if (cache != null) {
+            cache.clear();
+        } else {
+            if (DBG) Log.d(TAG, "no cache to clear is available");
+        }
     }
 
     public ImageLoader getImageLoader() {

@@ -64,7 +64,8 @@ public class MainActivity extends ActivityBase {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate");
         /*
-        In case this Activity has been started to ask to close the whole application
+        In case this Activity has been started by another Activity, asking to close the whole
+        application.
         This activity in the normal scenario is not started through intent
         */
         Intent intent = getIntent();
@@ -73,6 +74,12 @@ public class MainActivity extends ActivityBase {
             exitApplication();
             return;
         }
+        /*
+        Making sure the cache (on disk) is cleared when the application starts, to have fresh data.
+        It's up to the MainActivity(the application entry point) to do that
+        */
+        NetworkRequestUtils.getInstance(this.getApplicationContext()).clearCache();
+
         /* When activity is created, retrieve the authors to show */
         retrieveInitialDataFromServer();
     }

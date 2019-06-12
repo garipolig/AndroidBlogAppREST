@@ -113,8 +113,8 @@ public class CommentsActivity extends ActivityBase {
                              Considering only the comment date and the body
                             */
                             if (comment.getDate() != null) {
-                                String date = formatDate(
-                                        comment.getDate(), JSON_SERVER_DATE_FORMAT, UI_DATE_FORMAT);
+                                String date = formatDate(comment.getDate(),
+                                        JsonParams.JSON_SERVER_DATE_FORMAT, UI_DATE_FORMAT);
                                 itemsList.add(date + "\n" + comment.getUserName() +
                                         "\n" + comment.getBody());
                             } else {

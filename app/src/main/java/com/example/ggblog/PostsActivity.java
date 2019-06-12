@@ -148,8 +148,8 @@ public class PostsActivity extends ActivityBase {
                                 Considering only the post date and the title
                                 */
                             if (post.getDate() != null) {
-                                String date = formatDate(
-                                        post.getDate(), JSON_SERVER_DATE_FORMAT, UI_DATE_FORMAT);
+                                String date = formatDate(post.getDate(),
+                                        JsonParams.JSON_SERVER_DATE_FORMAT, UI_DATE_FORMAT);
                                 itemsList.add(date + "\n" + post.getTitle());
                             } else {
                                 Log.e(TAG, "Unable to retrieve the Post date");

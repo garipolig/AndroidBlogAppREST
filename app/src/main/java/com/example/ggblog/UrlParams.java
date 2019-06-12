@@ -1,5 +1,6 @@
 package com.example.ggblog;
 
+/* Parameters used when interrogating the Server */
 public final class UrlParams {
 
     /* E.g. http://sym-json-server.herokuapp.com/authors?&id=1 */
@@ -17,7 +18,6 @@ public final class UrlParams {
     public static final String DATE= "date";
     public static final String TITLE = "title";
     public static final String BODY = "body";
-    public static final String LINK = "Link";
 
     /* E.g. http://sym-json-server.herokuapp.com/authors?_page=1 */
     public static final String GET_PAGE_NUM = "_page";

@@ -24,6 +24,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import com.android.volley.Cache;
 import com.android.volley.NetworkResponse;
 import com.android.volley.ParseError;
 import com.android.volley.Request;
@@ -60,32 +61,6 @@ public abstract class ActivityBase extends AppCompatActivity {
 
     private static final String CONNECTIVITY_CHANGE_ACTION = "android.net.conn.CONNECTIVITY_CHANGE";
 
-    private static final String FIRST_PAGE = "first";
-    private static final String PREV_PAGE = "prev";
-    private static final String NEXT_PAGE = "next";
-    private static final String LAST_PAGE = "last";
-
-    /*
-    Page links are between "<" and ">" in the Response Header, like the following example:
-    Link=
-    <http://sym-json-server.herokuapp.com/authors?_page=1&_sort=name&_order=asc&_limit=20>;
-    rel="first",
-    <http://sym-json-server.herokuapp.com/authors?_page=2&_sort=name&_order=asc&_limit=20>;
-    rel="next",
-    <http://sym-json-server.herokuapp.com/authors?_page=13&_sort=name&_order=asc&_limit=20>;
-    rel="last"
-    */
-    private static final String PAGE_LINK_REGEXP = "<([^\"]*)>";
-    /* Page rel (first, next, prev, last) is in rel="[PAGE REL]" on the Page Link section */
-    private static final String PAGE_REL_REGEXP = "rel=\"([^\"]*)\"";
-    /*
-    Page number is in page=[PAGE NUMBER]> or page=[PAGE NUMBER]&
-    It will depends on the position of the page parameter in URL (at the end or not)
-    */
-    private static final String PAGE_NUM_REGEXP = "page=([0-9]*)&";
-
-    /* The format of the dates received in JSON */
-    protected static final String JSON_SERVER_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
     /* The format to be used for displaying in UI */
     protected static final String UI_DATE_FORMAT = "dd.MM.yyyy 'at' HH:mm:ss z" ;
 
@@ -135,13 +110,21 @@ public abstract class ActivityBase extends AppCompatActivity {
     protected boolean mIsInfoUnavailable;
 
     /*
-    Needing a Custom JsonArrayRequest, to retrieve the Link from header, which is not
-    retrieved by the default implementation
-    Since we are using pagination when retrieving the info (authors, posts, comments...),
-    the Link is needed to retrieve the URL Requests to be used to move from the current page
-    to the first/previous/next/last
+    A Custom JsonArrayRequest, to be able to
+    1) Extract the needed information from the Header Response, which is not retrieved by default.
+    2) Use a custom caching mechanism, since the default implementation is completely relying on
+    what the sever returns in the "expires" or "max-age=" attributes, we don't have control on it.
     */
     private class CustomJsonArrayRequest extends JsonArrayRequest {
+        /* Possible extension: make those values configurables in settings */
+        private static final boolean USE_CUSTOM_CACHING_STRATEGY = true;
+
+        /* When the cache will be hit, but also refreshed on background */
+        private static final long CACHE_HIT_TIME = 3 * 60 * 1000; // 3 minutes
+
+        /* When the cache entry expires completely */
+        private static final long CACHE_EXPIRATION_TIME = 24 * 60 * 60 * 1000; // 24 hours
+
         private final String mRequestedUrl;
 
         public CustomJsonArrayRequest(String url, Response.Listener
@@ -160,55 +143,101 @@ public abstract class ActivityBase extends AppCompatActivity {
         protected Response<JSONArray> parseNetworkResponse(NetworkResponse response) {
             if (VDBG) Log.d(TAG, "parseNetworkResponse");
             try {
-                String jsonStringData = new String(response.data,
+                final String jsonStringData = new String(response.data,
                         HttpHeaderParser.parseCharset(response.headers, PROTOCOL_CHARSET));
-                if(VDBG) Log.d(TAG, "Full Header: " + response.headers);
-                String jsonStringHeaderLink = response.headers.get(UrlParams.LINK);
-                if(VDBG) Log.d(TAG, "Header Link: " + jsonStringHeaderLink);
-                /*
-                The Header link contains al list of elements like that:
-                <http://sym-json-server.herokuapp.com/authors?_page=1>; rel="xxx"
-                We need to extract the pageLink (value between <> and the associated
-                pageRel (value in rel="xxx")
-                */
-                mCurrentPageUrlRequest = mRequestedUrl;
-                Pattern patternPageLink = Pattern.compile(PAGE_LINK_REGEXP);
-                Matcher matcherPageLink = patternPageLink.matcher(jsonStringHeaderLink);
-                Pattern patternPageRel = Pattern.compile(PAGE_REL_REGEXP);
-                Matcher matcherPageRel = patternPageRel.matcher(jsonStringHeaderLink);
-                /* For each PageLink we retrieve the associated PageRel */
-                while(matcherPageLink.find()) {
-                    String currPageLink = matcherPageLink.group(1);
-                    if (VDBG) Log.d(TAG, "PageLink: " + currPageLink);
-                    if (matcherPageRel.find()) {
-                        String currPageRel = matcherPageRel.group(1);
-                        if (VDBG) Log.d(TAG, "PageRel: " + currPageRel);
-                        if (currPageRel != null) {
-                            switch (currPageRel) {
-                                case FIRST_PAGE:
-                                    mFirstPageUrlRequest = currPageLink;
-                                    break;
-                                case PREV_PAGE:
-                                    mPrevPageUrlRequest = currPageLink;
-                                    break;
-                                case NEXT_PAGE:
-                                    mNextPageUrlRequest = currPageLink;
-                                    break;
-                                case LAST_PAGE:
-                                    mLastPageUrlRequest = currPageLink;
-                                    break;
-                                default:
-                                    break;
-                            }
-                        }
-                    }
+                computePageUrlRequests(response);
+                if (USE_CUSTOM_CACHING_STRATEGY) {
+                    Cache.Entry cacheEntry = configureCustomCacheFromResponse(response);
+                    return Response.success(new JSONArray(
+                            jsonStringData), cacheEntry);
+                } else {
+                    return Response.success(new JSONArray(
+                            jsonStringData), HttpHeaderParser.parseCacheHeaders(response));
                 }
-                return Response.success(new JSONArray(
-                        jsonStringData), HttpHeaderParser.parseCacheHeaders(response));
             } catch (UnsupportedEncodingException e) {
                 return Response.error(new ParseError(e));
             } catch (JSONException je) {
                 return Response.error(new ParseError(je));
+            }
+        }
+
+        private Cache.Entry configureCustomCacheFromResponse(NetworkResponse response) {
+            if (VDBG) Log.d(TAG, "configureCustomCacheFromResponse");
+            Cache.Entry cacheEntry = HttpHeaderParser.parseCacheHeaders(response);
+            if (cacheEntry == null) {
+                cacheEntry = new Cache.Entry();
+            }
+            long now = System.currentTimeMillis();
+            final long softTtl = now + CACHE_HIT_TIME;
+            if(VDBG) Log.d(TAG, "Cache Soft TTL=" + softTtl );
+            final long ttl = now + CACHE_EXPIRATION_TIME;
+            if(VDBG) Log.d(TAG, "Cache TTL=" + ttl);
+            cacheEntry.data = response.data;
+            cacheEntry.softTtl = softTtl;
+            cacheEntry.ttl = ttl;
+            String headerDateValue = response.headers.get(
+                    JsonParams.RESPONSE_HEADER_DATE);
+            if (headerDateValue != null) {
+                if(VDBG) Log.d(TAG, "Header Date=" + headerDateValue);
+                cacheEntry.serverDate = HttpHeaderParser.parseDateAsEpoch(
+                        headerDateValue);
+            }
+            String headerLastModifiedValue = response.headers.get(
+                    JsonParams.RESPONSE_HEADER_LAST_MODIFIED);
+            if (headerLastModifiedValue != null) {
+                if(VDBG) Log.d(TAG, "Last Modified=" + headerLastModifiedValue);
+                cacheEntry.lastModified = HttpHeaderParser.parseDateAsEpoch(
+                        headerLastModifiedValue);
+            }
+            cacheEntry.responseHeaders = response.headers;
+            return cacheEntry;
+        }
+
+        /*
+        retrieving the Link section from the Response Header header
+        Since we are using pagination when retrieving the info (authors, posts, comments...),
+        the Link is needed to retrieve the URL Requests to be used to move from the current page
+        to the first/previous/next/last thanks to specific buttons
+        */
+        private void computePageUrlRequests(NetworkResponse response) {
+            if (VDBG) Log.d(TAG, "computePageUrlRequests");
+            if(DBG) Log.d(TAG, "Full Header: " + response.headers);
+            String jsonStringHeaderLink = response.headers.get(JsonParams.RESPONSE_HEADER_LINK);
+            if(DBG) Log.d(TAG, "Header Link: " + jsonStringHeaderLink);
+            /*
+            The Header link contains al list of elements like that:
+            <http://sym-json-server.herokuapp.com/authors?_page=1>; rel="xxx"
+            We need to extract the pageLink (value between <> and the associated
+            pageRel (value in rel="xxx")
+            */
+            mCurrentPageUrlRequest = mRequestedUrl;
+            Pattern patternPageLink = Pattern.compile(JsonParams.RESPONSE_HEADER_LINK_REGEXP);
+            Matcher matcherPageLink = patternPageLink.matcher(jsonStringHeaderLink);
+            Pattern patternPageRel = Pattern.compile(JsonParams.RESPONSE_HEADER_REL_REGEXP);
+            Matcher matcherPageRel = patternPageRel.matcher(jsonStringHeaderLink);
+            /* For each PageLink we retrieve the associated PageRel (they are coupled together) */
+            while(matcherPageLink.find() && matcherPageRel.find()) {
+                String currPageLink = matcherPageLink.group(1);
+                String currPageRel = matcherPageRel.group(1);
+                if (VDBG) Log.d(TAG, "PageLink=" + currPageLink + ", PageRel=" + currPageRel);
+                if (currPageLink != null && currPageRel != null) {
+                    switch (currPageRel) {
+                        case JsonParams.RESPONSE_HEADER_REL_FIRST_PAGE:
+                            mFirstPageUrlRequest = currPageLink;
+                            break;
+                        case JsonParams.RESPONSE_HEADER_REL_PREV_PAGE:
+                            mPrevPageUrlRequest = currPageLink;
+                            break;
+                        case JsonParams.RESPONSE_HEADER_REL_NEXT_PAGE:
+                            mNextPageUrlRequest = currPageLink;
+                            break;
+                        case JsonParams.RESPONSE_HEADER_REL_LAST_PAGE:
+                            mLastPageUrlRequest = currPageLink;
+                            break;
+                        default:
+                            break;
+                    }
+                }
             }
         }
     }
@@ -462,7 +491,8 @@ public abstract class ActivityBase extends AppCompatActivity {
         }
     }
 
-    protected String formatDate(String date, String currentPattern, String newPattern) {
+    /* Utility method (static) to change the date format */
+    protected static String formatDate(String date, String currentPattern, String newPattern) {
         if (VDBG) Log.d(TAG, "formatDate");
         String formattedDate = null;
         if (date != null) {
@@ -525,7 +555,7 @@ public abstract class ActivityBase extends AppCompatActivity {
         String lastPageNum = null;
         if (mCurrentPageUrlRequest!= null) {
             /* Extracting the page number from the URL */
-            Pattern patternPageNum = Pattern.compile(PAGE_NUM_REGEXP);
+            Pattern patternPageNum = Pattern.compile(JsonParams.RESPONSE_HEADER_PAGE_NUM_REGEXP);
             /* Current Page Number */
             Matcher matcherCurrPageNum = patternPageNum.matcher(mCurrentPageUrlRequest);
             if (matcherCurrPageNum.find()) {
@@ -574,6 +604,9 @@ public abstract class ActivityBase extends AppCompatActivity {
 
     private void refresh() {
         if (VDBG) Log.d(TAG, "refresh");
+        /* First of all clearing the cache */
+        NetworkRequestUtils.getInstance(this.getApplicationContext()).clearCache();
+
         /*
         mCurrentPageUrlRequest is the current page url returned by the Web Server.
         It won't be set in case we didn't succeed to contact the Server.
