@@ -1,10 +1,18 @@
 package com.example.ggblog;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.ListAdapter;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 
 import com.android.volley.toolbox.NetworkImageView;
@@ -16,6 +24,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class CommentsActivity extends ActivityBase {
@@ -48,6 +57,58 @@ public class CommentsActivity extends ActivityBase {
 
     private String mCurrentPostId;
 
+    /*
+    Needed to fill the table (ListView) of Comments, using the specific row layout for the Comment
+    (see comment_row.xml)
+    */
+    private class CustomAdapter extends ArrayAdapter<Comment> {
+        private final Context mContext;
+        private final int mLayoutResourceId;
+
+        public CustomAdapter(Context context, int resource, List<Comment> comments) {
+            super(context, resource, comments);
+            if(VDBG) Log.d(TAG, "creating CustomAdapter");
+            mContext = context;
+            mLayoutResourceId = resource;
+        }
+
+        @NonNull
+        public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+            if(VDBG) Log.d(TAG, "getView");
+            View view = convertView;
+            if (view == null) {
+                LayoutInflater layoutInflater = LayoutInflater.from(mContext);
+                view = layoutInflater.inflate(mLayoutResourceId, null);
+            }
+            Comment comment = getItem(position);
+            if (comment != null) {
+                NetworkImageView authorAvatarView = view.findViewById(R.id.commentAuthorAvatarRow);
+                TextView commentDateTextView = view.findViewById(R.id.commentDateRow);
+                TextView authorUserNameTextView = view.findViewById( R.id.commentAuthorUsernameRow);
+                TextView commentBodyTextView = view.findViewById(R.id.commentBodyRow);
+                if (authorAvatarView != null && commentDateTextView != null
+                        && authorUserNameTextView != null && commentBodyTextView != null) {
+                    /* Default image until the network one is retrieved */
+                    authorAvatarView.setDefaultImageResId(R.drawable.default_author_image);
+                    setImage(comment.getAvatarUrl(), authorAvatarView);
+                    String date = getString(R.string.unknown_date);
+                    if (comment.getDate() != null) {
+                        date = formatDate(comment.getDate(),
+                                JsonParams.JSON_SERVER_DATE_FORMAT, UI_DATE_FORMAT);
+                    } else {
+                        Log.e(TAG, "Unable to retrieve the Comment date");
+                    }
+                    commentDateTextView.setText(date);
+                    authorUserNameTextView.setText(comment.getUserName());
+                    commentBodyTextView.setText(comment.getBody());
+                } else {
+                    Log.e(TAG, "An error occurred while retrieving layout elements");
+                }
+            }
+            return view;
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -55,15 +116,15 @@ public class CommentsActivity extends ActivityBase {
         mCurrentPostId = null;
         ActionBar actionBar = getSupportActionBar();
         NetworkImageView postImageNetworkImageView = findViewById(R.id.postImage);
-        TextView pstBodyTextView = findViewById(R.id.postBody);
+        TextView postBodyTextView = findViewById(R.id.postBody);
         if (actionBar != null && postImageNetworkImageView != null &&
-                pstBodyTextView != null) {
+                postBodyTextView != null) {
             /* Needed to show the back button on the TaskBar */
             actionBar.setDisplayHomeAsUpEnabled(true);
             actionBar.setDisplayShowHomeEnabled(true);
             /* Comments are not clickable */
             mItemsListContentListView.setOnItemClickListener(null);
-            /* Default image until network one is retrieved */
+            /* Default image until the network one is retrieved */
             postImageNetworkImageView.setDefaultImageResId(R.drawable.default_post_image);
 
             /* The Intent used to start this activity */
@@ -73,7 +134,7 @@ public class CommentsActivity extends ActivityBase {
                 if (post != null) {
                     if (VDBG) Log.d(TAG, "Post received=" + post);
                     mCurrentPostId = post.getId();
-                    pstBodyTextView.setText(post.getBody());
+                    postBodyTextView.setText(post.getBody());
                     setImage(post.getImageUrl(), postImageNetworkImageView);
                     /* When activity is created, retrieve the Comments to show */
                     retrieveInitialDataFromServer(post.getId());
@@ -97,9 +158,31 @@ public class CommentsActivity extends ActivityBase {
         return getString(R.string.comments_list);
     }
 
-    protected ArrayList<String> getInfoToDisplayOnTable(JSONArray jsonArray) {
+    protected void onItemClicked(int position) {
+        if (VDBG) Log.d(TAG, "onItemClicked position=" + position);
+        Log.e(TAG, "This method shall not be called: onItemClickListener is disabled");
+    }
+
+    /*
+    Not used for the moment, but can be useful in the future if we need to extract further
+    information from a comment
+    */
+    private Comment getItemAtPosition(int position) {
+        if (VDBG) Log.d(TAG, "getItemAtPosition position=" + position);
+        Comment comment = null;
+        ListAdapter adapter = mItemsListContentListView.getAdapter();
+        if (adapter instanceof CustomAdapter) {
+            CustomAdapter customAdapter = (CustomAdapter) adapter;
+            comment = customAdapter.getItem(position);
+        }
+        if (VDBG) Log.d(TAG, "Comment=" + comment);
+        return comment;
+    }
+
+    /* Information to be displayed on the Table (Comments List) */
+    private ArrayList<Comment> getInfoToDisplayOnTable(JSONArray jsonArray) {
         if (VDBG) Log.d(TAG, "getInfoToDisplayOnTable");
-        ArrayList<String> itemsList = new ArrayList<>();
+        ArrayList<Comment> itemsList = new ArrayList<>();
         if (jsonArray != null && jsonArray.length() > 0) {
             for (int i = 0; i < jsonArray.length(); i++) {
                 try {
@@ -108,20 +191,9 @@ public class CommentsActivity extends ActivityBase {
                         Comment comment = new Comment(jsonObject);
                         if (comment != null) {
                             if (VDBG) Log.d(TAG, "Current Comment " + comment.toString());
-                             /*
-                             Info that will be displayed on UI.
-                             Considering only the comment date and the body
-                            */
-                            if (comment.getDate() != null) {
-                                String date = formatDate(comment.getDate(),
-                                        JsonParams.JSON_SERVER_DATE_FORMAT, UI_DATE_FORMAT);
-                                itemsList.add(date + "\n" + comment.getUserName() +
-                                        "\n" + comment.getBody());
-                            } else {
-                                Log.e(TAG, "Unable to retrieve the Post date");
-                            }
+                            itemsList.add(comment);
                         } else {
-                            Log.e(TAG, "Error while retrieving current Comment info");
+                            Log.e(TAG, "Unable to retrieve the current Comment info");
                         }
                     } else {
                         Log.e(TAG, "jsonObject is NULL");
@@ -201,22 +273,24 @@ public class CommentsActivity extends ActivityBase {
         }
     }
 
+    /* Implementing this method because it's abstract in base class, but it's doing nothing */
     protected String getSelectedItemId(int position) {
         if (VDBG) Log.d(TAG, "getSelectedItemId position=" + position);
         Log.e(TAG, "This method cannot be called in this class. Comments are not clickable");
         return null;
     }
 
-    protected void handleDataRetrievalError() {
-        if (VDBG) Log.d(TAG, "handleDataRetrievalError");
-        mIsInfoUnavailable = true;
-        setErrorMessage();
-    }
-
-    protected Intent createTransitionIntent(int position) {
-        if (VDBG) Log.d(TAG, "createTransitionIntent");
-        /* No transitions available through Intent from this Activity */
-        return null;
+    protected void handleServerResponse(JSONArray response) {
+        if (VDBG) Log.d(TAG, "displayServerResponse");
+        boolean isDataRetrievalSuccess = false;
+        ArrayList<Comment> infoToDisplay = getInfoToDisplayOnTable(response);
+        if (infoToDisplay != null && !infoToDisplay.isEmpty()) {
+            isDataRetrievalSuccess = true;
+            updateCustomListView(infoToDisplay);
+        } else {
+            Log.e(TAG, "unable to retrieve the info to display");
+        }
+        super.handleServerResponse(isDataRetrievalSuccess);
     }
 
     private void retrieveInitialDataFromServer(String postId) {
@@ -252,6 +326,13 @@ public class CommentsActivity extends ActivityBase {
             Log.e(TAG, "post id is NULL or empty");
         }
         return requestUrl;
+    }
+
+    private void updateCustomListView(ArrayList<Comment> commentsList) {
+        if (VDBG) Log.d(TAG, "updateCustomListView");
+        ArrayAdapter<Comment> listAdapter =
+                new CustomAdapter(getApplicationContext(), R.layout.comment_row, commentsList);
+        mItemsListContentListView.setAdapter(listAdapter);
     }
 }
 

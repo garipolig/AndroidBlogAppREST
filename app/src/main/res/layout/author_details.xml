@@ -35,9 +35,11 @@
                         android:id="@+id/authorName"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
                         android:layout_column="0"
-                        android:textSize="16sp" />
+                        android:layout_weight="1"
+                        android:textColor="#E98C86"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
 
                 </TableRow>
 

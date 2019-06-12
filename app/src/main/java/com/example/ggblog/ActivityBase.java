@@ -24,11 +24,14 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import com.android.volley.AuthFailureError;
 import com.android.volley.Cache;
 import com.android.volley.NetworkResponse;
+import com.android.volley.NoConnectionError;
 import com.android.volley.ParseError;
 import com.android.volley.Request;
 import com.android.volley.Response;
+import com.android.volley.TimeoutError;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.HttpHeaderParser;
 import com.android.volley.toolbox.JsonArrayRequest;
@@ -64,7 +67,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     /* The format to be used for displaying in UI */
     protected static final String UI_DATE_FORMAT = "dd.MM.yyyy 'at' HH:mm:ss z" ;
 
-    protected static final Class<?> MAIN_ACTIVITY = MainActivity.class;
+    private static final Class<?> MAIN_ACTIVITY = MainActivity.class;
 
     /*
     SharedPreferences in common for all the Activities
@@ -107,7 +110,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     private String mLastPageUrlRequest;
 
     /* True when we are not able to retrieve data from server */
-    protected boolean mIsInfoUnavailable;
+    private boolean mIsInfoUnavailable;
 
     /*
     A Custom JsonArrayRequest, to be able to
@@ -274,29 +277,18 @@ public abstract class ActivityBase extends AppCompatActivity {
     */
     protected abstract int getContentView();
 
-    /*
-    Each Activity is handling its own list of items (authors, posts, comments...) and knows how to
-    retrieve the ID of the items selected on the UI, depending on the position in the ListView
-    */
-    protected abstract String getSelectedItemId(int position);
-
-    /*
-    Each Activity knows how to handle the unsuccessful data retrieval from server
-    */
-    protected abstract void handleDataRetrievalError();
-
-    /*
-    Each Activity knows which is the Next Activity when clicking on a specific item to have
-    more details (e.g. From Authors List to Author Details).
-    The correct Intent with the related content needs to be created
-    */
-    protected abstract Intent createTransitionIntent(int position);
-
     /* Title to be displayed on top of the Table */
     protected abstract String getListTitle();
 
-    /* Information to be displayed on the Table (listing the authors, posts, comments...) */
-    protected abstract ArrayList<String> getInfoToDisplayOnTable(JSONArray jsonArray);
+    /*
+    Each Activity knows what to do when an item (author, post...) is selected (clicked) "
+    */
+    protected abstract void onItemClicked(int position);
+
+    /*
+    Each Activity knows how to handle the Server response
+    */
+    protected abstract void handleServerResponse(JSONArray response);
 
     /*
     Each activity perform the request to the Web Server using a specific TAG, to be able to cancel
@@ -330,25 +322,7 @@ public abstract class ActivityBase extends AppCompatActivity {
                 public void onItemClick(AdapterView<?> parent, final View view,
                                         int position, long id) {
                     if (VDBG) Log.d(TAG, "onItemClick position=" + position + ", id=" + id);
-                    /*
-                    Cancel any ongoing request to retrieve a new items (authors, posts, comments...),
-                    since we are switching to a new page (e.g. from Authors List to Post List).
-                    */
-                    NetworkRequestUtils.getInstance(getApplicationContext()).cancelAllRequests(
-                            getRequestTag());
-                    String itemId = getSelectedItemId(position);
-                    if (DBG) Log.d(TAG, "Selected ID " + itemId);
-                    if (itemId != null) {
-                        /* Open a new activity (the intent will depend on the implementation of each page) */
-                        Intent intent = createTransitionIntent(position);
-                        if (intent != null) {
-                            startActivity(intent);
-                        } else {
-                            Log.e(TAG, "intent is NULL");
-                        }
-                    } else {
-                        Log.e(TAG, "unable to retrieve the selected item ID");
-                    }
+                    onItemClicked(position);
                 }
             });
             mFirstPageButton.setOnClickListener(new OnClickListener() {
@@ -445,25 +419,13 @@ public abstract class ActivityBase extends AppCompatActivity {
                 @Override
                 public void onResponse(JSONArray response) {
                     if (DBG) Log.d(TAG, "Response: " + response);
-                    ArrayList<String> infoToDisplay = getInfoToDisplayOnTable(response);
-                    if (infoToDisplay != null && !infoToDisplay.isEmpty()) {
-                        mIsInfoUnavailable = false;
-                        updateListView(infoToDisplay);
-                        updateAvailableButtons(false);
-                    } else {
-                        Log.e(TAG, "unable to retrieve the info to display");
-                        handleDataRetrievalError();
-                        updateAvailableButtons(true);
-                    }
-                    updatePageCounters();
+                    handleServerResponse(response);
                 }
             }, new Response.ErrorListener() {
                 @Override
                 public void onErrorResponse(VolleyError error) {
                     Log.e(TAG, "Error while retrieving data from server");
-                    handleDataRetrievalError();
-                    updateAvailableButtons(true);
-                    updatePageCounters();
+                    handleServerErrorResponse(error);
                 }
             });
             /* Add the request to the RequestQueue */
@@ -474,6 +436,28 @@ public abstract class ActivityBase extends AppCompatActivity {
             Log.e(TAG, "URL null or empty");
         }
     }
+
+    protected void handleServerResponse(boolean isDataRetrievalSuccess) {
+        if (VDBG) Log.d(TAG, "handleServerResponse Success=" + isDataRetrievalSuccess);
+        mIsInfoUnavailable = !isDataRetrievalSuccess;
+        if (isDataRetrievalSuccess) {
+            updateAvailableButtons(false);
+        } else {
+            Log.e(TAG, "unable to retrieve the info");
+            handleServerErrorResponse(new VolleyError());
+            updateAvailableButtons(true);
+        }
+        updatePageCounters();
+    }
+
+    private void handleServerErrorResponse(VolleyError error) {
+        if (VDBG) Log.d(TAG, "handleServerErrorResponse");
+        mIsInfoUnavailable = true;
+        setErrorMessage(error);
+        updateAvailableButtons(true);
+        updatePageCounters();
+    }
+
 
     protected void addUrlParam(StringBuilder url, String param, String value) {
         if (VDBG) Log.d(TAG, "addUrlParam");
@@ -516,10 +500,27 @@ public abstract class ActivityBase extends AppCompatActivity {
         return formattedDate;
     }
 
-    protected void setErrorMessage() {
+    private void setErrorMessage(VolleyError error) {
         if (VDBG) Log.d(TAG, "setErrorMessage");
         ArrayList<String> arrayList = new ArrayList<>();
-        arrayList.add(getString(R.string.error_message));
+        String errorMsgToDisplay;
+        String errorMsgReason = null;
+        String errorMsg = getString(R.string.error_message);
+        if (error instanceof TimeoutError) {
+            errorMsgReason = getString(R.string.server_error_timeout);
+        } else if (error instanceof NoConnectionError) {
+            errorMsgReason = getString(R.string.server_error_no_connection);
+        } else if (error instanceof AuthFailureError) {
+            errorMsgReason = getString(R.string.server_error_authentication);
+        } else if (error instanceof ParseError) {
+            errorMsgReason = getString(R.string.server_error_parsing);
+        }
+        if (errorMsgReason != null) {
+            errorMsgToDisplay = errorMsg + " (" + errorMsgReason + ")";
+        } else {
+            errorMsgToDisplay = errorMsg;
+        }
+        arrayList.add(errorMsgToDisplay);
         updateListView(arrayList);
     }
 
@@ -537,6 +538,7 @@ public abstract class ActivityBase extends AppCompatActivity {
         }
     }
 
+    /* Fill the ListView with a simple row (just a TextView), following the simple_row.xml layout */
     private void updateListView(ArrayList<String> itemsList) {
         if (VDBG) Log.d(TAG, "updateListView");
         ArrayAdapter<String> listAdapter =
@@ -573,8 +575,9 @@ public abstract class ActivityBase extends AppCompatActivity {
                 }
             }
             if (currPageNum != null && lastPageNum != null) {
-                mPageCountersTextView.setText(
-                        getString(R.string.page) + " " + currPageNum + "/" + lastPageNum);
+                String countersToDisplay = getString(R.string.page) + " " + currPageNum +
+                        "/" + lastPageNum;
+                mPageCountersTextView.setText(countersToDisplay);
             } else {
                 mPageCountersTextView.setText("");
             }

@@ -1,13 +1,20 @@
 package com.example.ggblog;
 
+import android.content.Context;
 import android.content.Intent;
 import android.location.Geocoder;
 import android.location.Address;
 import android.os.Bundle;
 import android.util.Log;
-import android.util.SparseArray;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.ListAdapter;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 
 import com.android.volley.toolbox.NetworkImageView;
@@ -57,17 +64,49 @@ public class PostsActivity extends ActivityBase {
             ));
 
     /*
-    Hosts the Posts currently displayed, since we are using pagination.
-    The position of the Post in the SparseArray corresponds to the position in the ListView shown
-    on the UI (it's not the post id).
-    This list is rebuilt each time the user asks for a new list of Posts to be displayed.
-    This list will be used for 2 purposes:
-    1) When the user clicks on a specific row of the ListView: we know the position of the row that
-    has been clicked and we can retrieve the post at the same position in the SparseArray.
-    2) When the user transit from the Posts List page to the Comments List Page for a specific post.
-    The Post information will be sent to the new activity through intent.
+    Needed to fill the table (ListView) of Posts, using the specific row layout for the Post
+    (see post_row.xml)
     */
-    private SparseArray<Post> mPostsArray;
+    private class CustomAdapter extends ArrayAdapter<Post> {
+        private final Context mContext;
+        private final int mLayoutResourceId;
+
+        public CustomAdapter(Context context, int resource, List<Post> posts) {
+            super(context, resource, posts);
+            if(VDBG) Log.d(TAG, "creating CustomAdapter");
+            mContext = context;
+            mLayoutResourceId = resource;
+        }
+
+        @NonNull
+        public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+            if(VDBG) Log.d(TAG, "getView");
+            View view = convertView;
+            if (view == null) {
+                LayoutInflater layoutInflater = LayoutInflater.from(mContext);
+                view = layoutInflater.inflate(mLayoutResourceId, null);
+            }
+            Post post = getItem(position);
+            if (post != null) {
+                TextView postDateTextView = view.findViewById(R.id.postDateRow);
+                TextView postTitleTextView = view.findViewById(R.id.postTitleRow);
+                if (postDateTextView != null && postTitleTextView != null) {
+                    String date = getString(R.string.unknown_date);
+                    if (post.getDate() != null) {
+                        date = formatDate(post.getDate(),
+                                JsonParams.JSON_SERVER_DATE_FORMAT, UI_DATE_FORMAT);
+                    } else {
+                        Log.e(TAG, "Unable to retrieve the Comment date");
+                    }
+                    postDateTextView.setText(date);
+                    postTitleTextView.setText(post.getTitle());
+                } else {
+                    Log.e(TAG, "An error occurred while retrieving layout elements");
+                }
+            }
+            return view;
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,7 +126,7 @@ public class PostsActivity extends ActivityBase {
             actionBar.setDisplayHomeAsUpEnabled(true);
             actionBar.setDisplayShowHomeEnabled(true);
 
-            /* Default image until network one is retrieved */
+            /* Default image until the network one is retrieved */
             authorAvatarNetworkImageView.setDefaultImageResId(R.drawable.default_author_image);
 
             /* The Intent used to start this activity */
@@ -125,11 +164,41 @@ public class PostsActivity extends ActivityBase {
         return getString(R.string.posts_list);
     }
 
-    protected ArrayList<String> getInfoToDisplayOnTable(JSONArray jsonArray) {
+    protected void onItemClicked(int position) {
+        if (VDBG) Log.d(TAG, "onItemClicked position=" + position);
+        Post post = getItemAtPosition(position);
+        /* Post info must be valid  */
+        if (post != null && post.getId() != null && !post.getId().isEmpty()) {
+            /*
+            Cancel any ongoing requests (e.g. display another page of Posts)
+            since we are switching to a new page (from Posts List to Comments List).
+            */
+            NetworkRequestUtils.getInstance(getApplicationContext()).cancelAllRequests(REQUEST_TAG);
+            Intent intent = new Intent(getApplicationContext(), NEXT_ACTIVITY);
+            if (VDBG) Log.d(TAG, "Post to send: " + post);
+            intent.putExtra(EXTRA_MESSAGE, post);
+            startActivity(intent);
+        } else {
+            Log.e(TAG, "post is NULL or not valid: " + post);
+        }
+    }
+
+    private Post getItemAtPosition(int position) {
+        if (VDBG) Log.d(TAG, "getItemAtPosition position=" + position);
+        Post post = null;
+        ListAdapter adapter = mItemsListContentListView.getAdapter();
+        if (adapter instanceof CustomAdapter) {
+            CustomAdapter customAdapter = (CustomAdapter) adapter;
+            post = customAdapter.getItem(position);
+        }
+        if (VDBG) Log.d(TAG, "Post=" + post);
+        return post;
+    }
+
+    /* Information to be displayed on the Table (Posts List) */
+    private ArrayList<Post> getInfoToDisplayOnTable(JSONArray jsonArray) {
         if (VDBG) Log.d(TAG, "getInfoToDisplayOnTable");
-        /* Start with an empty list of Posts, to be filled from jsonArray */
-        mPostsArray = new SparseArray<>();
-        ArrayList<String> itemsList = new ArrayList<>();
+        ArrayList<Post> itemsList = new ArrayList<>();
         if (jsonArray != null && jsonArray.length() > 0) {
             for (int i = 0; i < jsonArray.length(); i++) {
                 try {
@@ -138,24 +207,9 @@ public class PostsActivity extends ActivityBase {
                         Post post = new Post(jsonObject);
                         if (post != null) {
                             if (VDBG) Log.d(TAG, "Current Post " + post.toString());
-                                /*
-                                Using as key the position of the post in the jsonArray, which will be
-                                the same of the position on the UI (ListView)
-                                */
-                            mPostsArray.put(i, post);
-                                /*
-                                Info that will be displayed on UI.
-                                Considering only the post date and the title
-                                */
-                            if (post.getDate() != null) {
-                                String date = formatDate(post.getDate(),
-                                        JsonParams.JSON_SERVER_DATE_FORMAT, UI_DATE_FORMAT);
-                                itemsList.add(date + "\n" + post.getTitle());
-                            } else {
-                                Log.e(TAG, "Unable to retrieve the Post date");
-                            }
+                            itemsList.add(post);
                         } else {
-                            Log.e(TAG, "Error while retrieving current Author info");
+                            Log.e(TAG, "Unable to retrieve the current Post info");
                         }
                     } else {
                         Log.e(TAG, "jsonObject is NULL");
@@ -235,41 +289,17 @@ public class PostsActivity extends ActivityBase {
         }
     }
 
-    protected String getSelectedItemId(int position) {
-        if (VDBG) Log.d(TAG, "getSelectedItemId position=" + position);
-        String id = null;
-        if (mPostsArray != null) {
-            Post post = mPostsArray.get(position);
-            if (post != null) {
-                id = post.getId();
-            }
-        }
-        if (id == null) {
-            Log.e(TAG, "unable to retrieve the selected Post ID");
-        }
-        return id;
-    }
-
-    protected void handleDataRetrievalError() {
-        if (VDBG) Log.d(TAG, "handleDataRetrievalError");
-        if (mPostsArray != null) {
-            mPostsArray.clear();
-        }
-        mIsInfoUnavailable = true;
-        setErrorMessage();
-    }
-
-    protected Intent createTransitionIntent(int position) {
-        if (VDBG) Log.d(TAG, "createTransitionIntent position=" + position);
-        Intent intent = null;
-        if (mPostsArray != null) {
-            intent = new Intent(getApplicationContext(), NEXT_ACTIVITY);
-            if (VDBG) Log.d(TAG, "Post to send: " + mPostsArray.get(position));
-            intent.putExtra(EXTRA_MESSAGE, mPostsArray.get(position));
+    protected void handleServerResponse(JSONArray response) {
+        if (VDBG) Log.d(TAG, "displayServerResponse");
+        boolean isDataRetrievalSuccess = false;
+        ArrayList<Post> infoToDisplay = getInfoToDisplayOnTable(response);
+        if (infoToDisplay != null && !infoToDisplay.isEmpty()) {
+            isDataRetrievalSuccess = true;
+            updateCustomListView(infoToDisplay);
         } else {
-            Log.e(TAG, "unable to create intent since mPostsArray is NULL");
+            Log.e(TAG, "unable to retrieve the info to display");
         }
-        return intent;
+        super.handleServerResponse(isDataRetrievalSuccess);
     }
 
     private void retrieveInitialDataFromServer(String authorId) {
@@ -307,6 +337,13 @@ public class PostsActivity extends ActivityBase {
         return requestUrl;
     }
 
+    private void updateCustomListView(ArrayList<Post> postsList) {
+        if (VDBG) Log.d(TAG, "updateCustomListView");
+        ArrayAdapter<Post> listAdapter =
+                new CustomAdapter(getApplicationContext(), R.layout.post_row, postsList);
+        mItemsListContentListView.setAdapter(listAdapter);
+    }
+
     private void setAuthorAddress(TextView authorAddressTextView,
                                   String latitude, String longitude) {
         if (VDBG) Log.d(TAG,
@@ -322,6 +359,7 @@ public class PostsActivity extends ActivityBase {
                 List<Address> addresses = geocoder.getFromLocation(
                         latitudeDouble, longitudeDouble, 1);
                 if (addresses != null && !addresses.isEmpty()) {
+                    String addressToDisplay;
                     /* Showing only the Country for the moment */
                     //String address = addresses.get(0).getAddressLine(0);
                     //String city = addresses.get(0).getLocality();
@@ -329,7 +367,8 @@ public class PostsActivity extends ActivityBase {
                     //String state = addresses.get(0).getAdminArea();
                     String country = addresses.get(0).getCountryName();
                     if (country != null && !country.isEmpty()) {
-                        authorAddressTextView.setText("(" + country + ")");
+                        addressToDisplay = "(" + country + ")";
+                        authorAddressTextView.setText(addressToDisplay);
                     } else {
                         /* Not an error, since this info could be not available for an author */
                         if (VDBG) Log.d(TAG, "Author country not available");

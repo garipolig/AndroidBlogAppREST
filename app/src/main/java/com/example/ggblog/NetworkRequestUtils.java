@@ -55,7 +55,7 @@ public class NetworkRequestUtils {
         return INSTANCE;
     }
 
-    public RequestQueue getRequestQueue() {
+    private RequestQueue getRequestQueue() {
         if (VDBG) Log.d(TAG, "getRequestQueue");
         if (mRequestQueue == null) {
             mRequestQueue = Volley.newRequestQueue(mContext.getApplicationContext());

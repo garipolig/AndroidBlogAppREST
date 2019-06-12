@@ -1,13 +1,23 @@
 package com.example.ggblog;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.SparseArray;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ListAdapter;
+import android.widget.ArrayAdapter;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.json.JSONArray;
@@ -47,17 +57,46 @@ public class MainActivity extends ActivityBase {
             ));
 
     /*
-    Hosts the Authors currently displayed, since we are using pagination.
-    The position of the Author in the SparseArray corresponds to the position in the ListView shown
-    on the UI (it's not the author id).
-    This list is rebuilt each time the user asks for a new list of Authors to be displayed.
-    This list will be used for 2 purposes:
-    1) When user clicks on a specific row of the ListView: we know the position of the row that
-    has been clicked and we can retrieve the author at the same position in the SparseArray.
-    2) When user transit from the Authors List page to the Posts List Page for a specific author.
-    The Author information will be sent to the new activity through intent.
-   */
-    private SparseArray<Author> mAuthorsArray;
+    Needed to fill the table (ListView) of Authors, using the specific row layout for the Author
+    (see author_row.xml)
+    */
+    private class CustomAdapter extends ArrayAdapter<Author> {
+        private final Context mContext;
+        private final int mLayoutResourceId;
+
+        public CustomAdapter(Context context, int resource, List<Author> authors) {
+            super(context, resource, authors);
+            if(VDBG) Log.d(TAG, "creating CustomAdapter");
+            mContext = context;
+            mLayoutResourceId = resource;
+        }
+
+
+        @NonNull
+        public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+            if(VDBG) Log.d(TAG, "getView");
+            View view = convertView;
+            if (view == null) {
+                LayoutInflater layoutInflater = LayoutInflater.from(mContext);
+                view = layoutInflater.inflate(mLayoutResourceId, null);
+            }
+            Author author = getItem(position);
+            if (author != null) {
+                /*
+                As of today only the Author name is displayed.
+                In case of future extensions, just update the row layout author_row.xml and add
+                the related code here
+                */
+                TextView authorNameTextView = view.findViewById(R.id.authorNameRow);
+                if (authorNameTextView != null) {
+                    authorNameTextView.setText(author.getName());
+                } else {
+                    Log.e(TAG, "An error occurred while retrieving layout elements");
+                }
+            }
+            return view;
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,11 +132,41 @@ public class MainActivity extends ActivityBase {
         return getString(R.string.authors_list);
     }
 
-    protected ArrayList<String> getInfoToDisplayOnTable(JSONArray jsonArray) {
+    protected void onItemClicked(int position) {
+        if (VDBG) Log.d(TAG, "onItemClicked position=" + position);
+        Author author = getItemAtPosition(position);
+        /* Author info must be valid  */
+        if (author != null && author.getId() != null && !author.getId().isEmpty()) {
+            /*
+            Cancel any ongoing requests (e.g. display another page of Authors)
+            since we are switching to a new page (from Authors List to Posts List).
+            */
+            NetworkRequestUtils.getInstance(getApplicationContext()).cancelAllRequests(REQUEST_TAG);
+            Intent intent = new Intent(getApplicationContext(), NEXT_ACTIVITY);
+            if (VDBG) Log.d(TAG, "Author to send: " + author);
+            intent.putExtra(EXTRA_MESSAGE, author);
+            startActivity(intent);
+        } else {
+            Log.e(TAG, "author is NULL or not valid: " + author);
+        }
+    }
+
+    private Author getItemAtPosition(int position) {
+        if (VDBG) Log.d(TAG, "getItemAtPosition position=" + position);
+        Author author = null;
+        ListAdapter adapter = mItemsListContentListView.getAdapter();
+        if (adapter instanceof CustomAdapter) {
+            CustomAdapter customAdapter = (CustomAdapter) adapter;
+            author = customAdapter.getItem(position);
+        }
+        if (VDBG) Log.d(TAG, "Author=" + author);
+        return author;
+    }
+
+    /* Information to be displayed on the Table (Authors List) */
+    private ArrayList<Author> getInfoToDisplayOnTable(JSONArray jsonArray) {
         if (VDBG) Log.d(TAG, "getInfoToDisplayOnTable");
-        /* Start with an empty list of Authors, to be filled from jsonArray */
-        mAuthorsArray = new SparseArray<>();
-        ArrayList<String> itemsList = new ArrayList<>();
+        ArrayList<Author> itemsList = new ArrayList<>();
         if (jsonArray != null && jsonArray.length() > 0) {
             for (int i = 0; i < jsonArray.length(); i++) {
                 try {
@@ -106,15 +175,9 @@ public class MainActivity extends ActivityBase {
                         Author author = new Author(jsonObject);
                         if (author != null) {
                             if (VDBG) Log.d(TAG, "Current Author " + author.toString());
-                            /*
-                            Using as key the position of the author in the jsonArray, which will be
-                            the same of the position on the UI (ListView)
-                            */
-                            mAuthorsArray.put(i, author);
-                            /* Info that will be displayed on UI. Considering only the author name */
-                            itemsList.add(author.getName());
+                            itemsList.add(author);
                         } else {
-                            Log.e(TAG, "Error while retrieving current Author info");
+                            Log.e(TAG, "Unable to retrieve the current Author info");
                         }
                     } else {
                         Log.e(TAG, "jsonObject is NULL");
@@ -194,41 +257,17 @@ public class MainActivity extends ActivityBase {
         }
     }
 
-    protected String getSelectedItemId(int position) {
-        if (VDBG) Log.d(TAG, "getSelectedItemId position=" + position);
-        String id = null;
-        if (mAuthorsArray != null) {
-            Author author = mAuthorsArray.get(position);
-            if (author != null) {
-                id = author.getId();
-            }
-        }
-        if (id == null) {
-            Log.e(TAG, "unable to retrieve the selected Author ID");
-        }
-        return id;
-    }
-
-    protected void handleDataRetrievalError() {
-        if (VDBG) Log.d(TAG, "handleDataRetrievalError");
-        if (mAuthorsArray != null) {
-            mAuthorsArray.clear();
-        }
-        mIsInfoUnavailable = true;
-        setErrorMessage();
-    }
-
-    protected Intent createTransitionIntent(int position) {
-        if (VDBG) Log.d(TAG, "createTransitionIntent position=" + position);
-        Intent intent = null;
-        if (mAuthorsArray != null) {
-            intent = new Intent(getApplicationContext(), NEXT_ACTIVITY);
-            if (VDBG) Log.d(TAG, "Author to send: " + mAuthorsArray.get(position));
-            intent.putExtra(EXTRA_MESSAGE, mAuthorsArray.get(position));
+    protected void handleServerResponse(JSONArray response) {
+        if (VDBG) Log.d(TAG, "displayServerResponse");
+        boolean isDataRetrievalSuccess = false;
+        ArrayList<Author> infoToDisplay = getInfoToDisplayOnTable(response);
+        if (infoToDisplay != null && !infoToDisplay.isEmpty()) {
+            isDataRetrievalSuccess = true;
+            updateCustomListView(infoToDisplay);
         } else {
-            Log.e(TAG, "unable to create intent since mAuthorsArray is NULL");
+            Log.e(TAG, "unable to retrieve the info to display");
         }
-        return intent;
+        super.handleServerResponse(isDataRetrievalSuccess);
     }
 
     private void retrieveInitialDataFromServer() {
@@ -257,5 +296,12 @@ public class MainActivity extends ActivityBase {
         addUrlParam(requestUrlSb, UrlParams.ORDER_RESULTS, ORDERING_METHODS);
         addUrlParam(requestUrlSb, UrlParams.LIMIT_NUM_RESULTS, mMaxNumItemsPerPagePref);
         return requestUrlSb.toString();
+    }
+
+    private void updateCustomListView(ArrayList<Author> authorsList) {
+        if (VDBG) Log.d(TAG, "updateCustomListView");
+        ArrayAdapter<Author> listAdapter =
+                new CustomAdapter(getApplicationContext(), R.layout.author_row, authorsList);
+        mItemsListContentListView.setAdapter(listAdapter);
     }
 }
