@@ -23,7 +23,6 @@
     <string name="cover_image_desc">Cover Image</string>
     <string name="page">Page</string>
 
-
     <!-- Preference Titles -->
     <string name="general_prefs_header">General</string>
     <string name="author_prefs_header">Authors</string>
@@ -40,13 +39,16 @@
     <!-- Authors Page Preferences -->
     <string name="authors_sub_page_title">Web Server Sub Page</string>
     <string name="max_num_authors_per_page_title">Max number of lines/page</string>
+    <string name="authors_ordering_method_title">Ordering Method</string>
 
     <!-- Posts Page Preferences -->
     <string name="posts_sub_page_title">Web Server Sub Page</string>
     <string name="max_num_posts_per_page_title">Max number of lines/page</string>
+    <string name="posts_ordering_method_title">Ordering Method</string>
 
     <!-- Comments Page Preferences -->
     <string name="comments_sub_page_title">Web Server Sub Page</string>
     <string name="max_num_comments_per_page_title">Max number of lines/page</string>
+    <string name="comments_ordering_method_title">Ordering Method</string>
 
 </resources>

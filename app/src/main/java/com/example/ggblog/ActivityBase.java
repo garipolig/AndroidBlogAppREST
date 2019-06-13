@@ -86,6 +86,11 @@ public abstract class ActivityBase extends AppCompatActivity {
     protected String mSubPagePref;
     private boolean mIsAutoRefreshEnabledPref;
     protected String mMaxNumItemsPerPagePref;
+    /* Note: today in the user settings we are supporting only a single attribute for ordering
+    It can be extended if needed.
+    E.g. name ASC/DESC for Authors, date ASC/DESC for Posts and Comments
+    */
+    protected String mItemsOrderingMethodPref;
 
     private TextView mPageCountersTextView;
     protected ListView mItemsListContentListView;

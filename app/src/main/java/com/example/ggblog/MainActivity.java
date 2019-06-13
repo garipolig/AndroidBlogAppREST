@@ -28,21 +28,7 @@ public class MainActivity extends ActivityBase {
 
     private static final String TAG = "MainActivity";
 
-    /* Possible extension: make those parameters user configurable through UI Settings */
-
-    /*
-    Possibility to have several sorting attributes, separated by comma
-    Possible extension: make this parameter configurable through Settings
-    */
-    private static final String SORTING_ATTRIBUTES = UrlParams.NAME;
-
-    /*
-    Possibility to have several ordering attributes (one for each sorting attr), separated by comma
-    Possible extension: make this parameter configurable through Settings
-    */
-    private static final String ORDERING_METHODS = UrlParams.ASC_ORDER;
-
-    /* To identify the Server request and being able to cancel them if needed */
+    /* To identify the Server requests made by this Activity, to cancel them if needed */
     private static final String REQUEST_TAG = "AUTHORS_LIST_REQUEST";
 
     private static final Class<?> NEXT_ACTIVITY = PostsActivity.class;
@@ -53,7 +39,8 @@ public class MainActivity extends ActivityBase {
     private static final Set<String> PREFERENCES_KEYS =
             new HashSet<>(Arrays.asList(
                     SettingsActivity.PREF_AUTHORS_SUB_PAGE_KEY,
-                    SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY
+                    SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY,
+                    SettingsActivity.PREF_AUTHORS_ORDERING_METHOD_KEY
             ));
 
     /*
@@ -207,6 +194,7 @@ public class MainActivity extends ActivityBase {
             switch (key) {
                 case SettingsActivity.PREF_AUTHORS_SUB_PAGE_KEY:
                 case SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY:
+                case SettingsActivity.PREF_AUTHORS_ORDERING_METHOD_KEY:
                     /*
                     Re-creating again the list of Authors with the new pagination, as if we were
                     starting again this Activity.
@@ -248,6 +236,12 @@ public class MainActivity extends ActivityBase {
                             SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY,
                             SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_DEFAULT);
                     if (DBG) Log.d(TAG, "Max Num Posts/Page=" + mMaxNumItemsPerPagePref);
+                    break;
+                case SettingsActivity.PREF_AUTHORS_ORDERING_METHOD_KEY:
+                    mItemsOrderingMethodPref = mSharedPreferences.getString(
+                            SettingsActivity.PREF_AUTHORS_ORDERING_METHOD_KEY,
+                            SettingsActivity.PREF_AUTHORS_ORDERING_METHOD_DEFAULT);
+                    if (DBG) Log.d(TAG, "Ordering Method=" + mItemsOrderingMethodPref);
                     break;
                 default:
                     break;
@@ -292,9 +286,9 @@ public class MainActivity extends ActivityBase {
                 UrlParams.GET_PAGE_NUM + "=1";
         if (DBG) Log.d(TAG, "Initial URL is " + url);
         StringBuilder requestUrlSb = new StringBuilder(url);
-        addUrlParam(requestUrlSb, UrlParams.SORT_RESULTS, SORTING_ATTRIBUTES);
-        addUrlParam(requestUrlSb, UrlParams.ORDER_RESULTS, ORDERING_METHODS);
         addUrlParam(requestUrlSb, UrlParams.LIMIT_NUM_RESULTS, mMaxNumItemsPerPagePref);
+        /* mItemsOrderingMethodPref is already in the good format. No need to use addUrlParam */
+        requestUrlSb.append(mItemsOrderingMethodPref);
         return requestUrlSb.toString();
     }
 

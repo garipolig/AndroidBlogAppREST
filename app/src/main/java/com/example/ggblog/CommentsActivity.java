@@ -31,19 +31,7 @@ public class CommentsActivity extends ActivityBase {
 
     private static final String TAG = "CommentsActivity";
 
-    /*
-    Possibility to have several sorting attributes, separated by comma
-    Possible extension: make this parameter configurable through Settings
-    */
-    private static final String SORTING_ATTRIBUTES = UrlParams.DATE;
-
-    /*
-    Possibility to have several ordering attributes (one for each sorting attr), separated by comma
-    Possible extension: make this parameter configurable through Settings
-    */
-    private static final String ORDERING_METHODS = UrlParams.ASC_ORDER;
-
-    /* To identify the Server request and being able to cancel them if needed */
+    /* To identify the Server requests made by this Activity, to cancel them if needed */
     private static final String REQUEST_TAG = "COMMENTS_LIST_REQUEST";
 
     /*
@@ -52,7 +40,8 @@ public class CommentsActivity extends ActivityBase {
     private static final Set<String> PREFERENCES_KEYS =
             new HashSet<>(Arrays.asList(
                     SettingsActivity.PREF_COMMENTS_SUB_PAGE_KEY,
-                    SettingsActivity.PREF_MAX_NUM_COMMENTS_PER_PAGE_KEY
+                    SettingsActivity.PREF_MAX_NUM_COMMENTS_PER_PAGE_KEY,
+                    SettingsActivity.PREF_COMMENTS_ORDERING_METHOD_KEY
             ));
 
     private String mCurrentPostId;
@@ -223,6 +212,7 @@ public class CommentsActivity extends ActivityBase {
             switch (key) {
                 case SettingsActivity.PREF_COMMENTS_SUB_PAGE_KEY:
                 case SettingsActivity.PREF_MAX_NUM_COMMENTS_PER_PAGE_KEY:
+                case SettingsActivity.PREF_COMMENTS_ORDERING_METHOD_KEY:
                     /*
                     Re-creating again the list of Comments with the new pagination, as if we were
                     starting again this Activity.
@@ -264,6 +254,12 @@ public class CommentsActivity extends ActivityBase {
                             SettingsActivity.PREF_MAX_NUM_COMMENTS_PER_PAGE_KEY,
                             SettingsActivity.PREF_MAX_NUM_COMMENTS_PER_PAGE_DEFAULT);
                     if (DBG) Log.d(TAG, "Max Num Comments/Page=" + mMaxNumItemsPerPagePref);
+                    break;
+                case SettingsActivity.PREF_COMMENTS_ORDERING_METHOD_KEY:
+                    mItemsOrderingMethodPref = mSharedPreferences.getString(
+                            SettingsActivity.PREF_COMMENTS_ORDERING_METHOD_KEY,
+                            SettingsActivity.PREF_COMMENTS_ORDERING_METHOD_DEFAULT);
+                    if (DBG) Log.d(TAG, "Ordering Method=" + mItemsOrderingMethodPref);
                     break;
                 default:
                     break;
@@ -318,9 +314,9 @@ public class CommentsActivity extends ActivityBase {
             if (DBG) Log.d(TAG, "Initial URL is " + url);
             StringBuilder requestUrlSb = new StringBuilder(url);
             addUrlParam(requestUrlSb, UrlParams.POST_ID, postId);
-            addUrlParam(requestUrlSb, UrlParams.SORT_RESULTS, SORTING_ATTRIBUTES);
-            addUrlParam(requestUrlSb, UrlParams.ORDER_RESULTS, ORDERING_METHODS);
             addUrlParam(requestUrlSb, UrlParams.LIMIT_NUM_RESULTS, mMaxNumItemsPerPagePref);
+            /* mItemsOrderingMethodPref is already in the good format. No need to use addUrlParam */
+            requestUrlSb.append(mItemsOrderingMethodPref);
             requestUrl = requestUrlSb.toString();
         } else {
             Log.e(TAG, "post id is NULL or empty");

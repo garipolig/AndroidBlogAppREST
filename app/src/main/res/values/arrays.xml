@@ -1,0 +1,33 @@
+<resources>
+    <!-- Sorting/Ordering Preference -->
+    <string-array name="authors_ordering_method_entries">
+        <item>NAME (A->Z)</item>
+        <item>NAME (Z->A)</item>
+    </string-array>
+
+    <string-array name="authors_ordering_method_values">
+        <item>&amp;_sort=name&amp;_order=asc</item>
+        <item>&amp;_sort=name&amp;_order=desc</item>
+    </string-array>
+
+    <string-array name="posts_ordering_method_entries">
+        <item>DATE (OLD->NEW)</item>
+        <item>DATE (NEW->OLD)</item>
+    </string-array>
+
+    <string-array name="posts_ordering_method_values">
+        <item>&amp;_sort=date&amp;_order=asc</item>
+        <item>&amp;_sort=date&amp;_order=desc</item>
+    </string-array>
+
+    <string-array name="comments_ordering_method_entries">
+        <item>DATE (OLD->NEW)</item>
+        <item>DATE (NEW->OLD)</item>
+    </string-array>
+
+    <string-array name="comments_ordering_method_values">
+        <item>&amp;_sort=date&amp;_order=asc</item>
+        <item>&amp;_sort=date&amp;_order=desc</item>
+    </string-array>
+
+</resources>

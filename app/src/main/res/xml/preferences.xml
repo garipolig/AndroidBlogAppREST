@@ -31,6 +31,14 @@
             app:title="@string/max_num_authors_per_page_title"
             app:useSimpleSummaryProvider="true" />
 
+        <ListPreference
+            app:key="authorsOrderingMethod"
+            app:defaultValue="&amp;_sort=name&amp;_order=asc"
+            app:entries="@array/authors_ordering_method_entries"
+            app:entryValues="@array/authors_ordering_method_values"
+            app:title="@string/authors_ordering_method_title"
+            app:useSimpleSummaryProvider="true" />
+
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/posts_prefs_header">
@@ -47,6 +55,14 @@
             app:title="@string/max_num_posts_per_page_title"
             app:useSimpleSummaryProvider="true" />
 
+        <ListPreference
+            app:key="postsOrderingMethod"
+            app:defaultValue="&amp;_sort=date&amp;_order=asc"
+            app:entries="@array/posts_ordering_method_entries"
+            app:entryValues="@array/posts_ordering_method_values"
+            app:title="@string/posts_ordering_method_title"
+            app:useSimpleSummaryProvider="true" />
+
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/comments_prefs_header">
@@ -61,6 +77,14 @@
             app:key="maxNumCommentsPerPage"
             app:defaultValue="10"
             app:title="@string/max_num_comments_per_page_title"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:key="commentsOrderingMethod"
+            app:defaultValue="&amp;_sort=date&amp;_order=asc"
+            app:entries="@array/comments_ordering_method_entries"
+            app:entryValues="@array/comments_ordering_method_values"
+            app:title="@string/comments_ordering_method_title"
             app:useSimpleSummaryProvider="true" />
 
     </PreferenceCategory>

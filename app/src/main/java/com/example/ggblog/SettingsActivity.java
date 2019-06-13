@@ -26,18 +26,24 @@ public class SettingsActivity extends AppCompatActivity {
     public static final String PREF_AUTHORS_SUB_PAGE_DEFAULT = "authors";
     public static final String PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY = "maxNumAuthorsPerPage";
     public static final String PREF_MAX_NUM_AUTHORS_PER_PAGE_DEFAULT = "20";
+    public static final String PREF_AUTHORS_ORDERING_METHOD_KEY = "authorsOrderingMethod";
+    public static final String PREF_AUTHORS_ORDERING_METHOD_DEFAULT = "&_sort=name&_order=asc";
 
     /* Posts Preferences */
     public static final String PREF_POSTS_SUB_PAGE_KEY = "postsSubPage";
     public static final String PREF_POSTS_SUB_PAGE_DEFAULT = "posts";
     public static final String PREF_MAX_NUM_POSTS_PER_PAGE_KEY = "maxNumPostsPerPage";
     public static final String PREF_MAX_NUM_POSTS_PER_PAGE_DEFAULT = "20";
+    public static final String PREF_POSTS_ORDERING_METHOD_KEY = "postsOrderingMethod";
+    public static final String PREF_POSTS_ORDERING_METHOD_DEFAULT = "&_sort=date&_order=asc";
 
     /* Comments Preferences */
     public static final String PREF_COMMENTS_SUB_PAGE_KEY = "commentsSubPage";
     public static final String PREF_COMMENTS_SUB_PAGE_DEFAULT = "comments";
     public static final String PREF_MAX_NUM_COMMENTS_PER_PAGE_KEY = "maxNumCommentsPerPage";
     public static final String PREF_MAX_NUM_COMMENTS_PER_PAGE_DEFAULT = "20";
+    public static final String PREF_COMMENTS_ORDERING_METHOD_KEY = "commentsOrderingMethod";
+    public static final String PREF_COMMENTS_ORDERING_METHOD_DEFAULT = "&_sort=date&_order=asc";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
