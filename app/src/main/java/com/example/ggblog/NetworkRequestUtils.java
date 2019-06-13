@@ -6,6 +6,7 @@ import android.util.Log;
 import android.util.LruCache;
 
 import com.android.volley.Cache;
+import com.android.volley.Cache.Entry;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.ImageLoader;
 import com.android.volley.toolbox.Volley;
@@ -73,6 +74,7 @@ public class NetworkRequestUtils {
         getRequestQueue().cancelAll(tag);
     }
 
+    /* Clear the whole cache */
     public void clearCache() {
         if (VDBG) Log.d(TAG, "clearCache");
         Cache cache = getRequestQueue().getCache();
@@ -81,6 +83,54 @@ public class NetworkRequestUtils {
         } else {
             if (DBG) Log.d(TAG, "no cache to clear is available");
         }
+    }
+
+    /* Clear a specific entry of the cache */
+    public void clearCache(String url) {
+        if (VDBG) Log.d(TAG, "clearCache URL=" + url);
+        Cache cache = getRequestQueue().getCache();
+        if (cache != null) {
+            cache.remove(url);
+        } else {
+            if (DBG) Log.d(TAG, "no cache to clear is available");
+        }
+    }
+
+    /* Invalidate a specific entry of the cache */
+    public void invalidateCache(String url) {
+        if (VDBG) Log.d(TAG, "invalidateCache URL=" + url);
+        Cache cache = getRequestQueue().getCache();
+        if (cache != null) {
+            cache.invalidate(url, true);
+        } else {
+            if (DBG) Log.d(TAG, "no cache to invalidate is available");
+        }
+    }
+
+    /* The entry needs to be converted into the correct format (Json, bitmap...) */
+    public Entry getEntryFromCache(String url) {
+        if (VDBG) Log.d(TAG, "getEntryFromCache URL=" + url);
+        Entry entry = null;
+        if (isUrlPresentInCache(url)) {
+            entry = getRequestQueue().getCache().get(url);
+        }
+        return entry;
+    }
+
+    public boolean isUrlPresentInCache(String url) {
+        if (VDBG) Log.d(TAG, "isUrlPresentInCache URL=" + url);
+        boolean isPresent = false;
+        Cache cache = getRequestQueue().getCache();
+        if (cache != null) {
+            if (cache.get(url) != null) {
+                isPresent = true;
+            } else {
+                if (VDBG) Log.d(TAG, "URL not present in cache");
+            }
+        } else {
+            if (DBG) Log.d(TAG, "no cache is available");
+        }
+        return isPresent;
     }
 
     public ImageLoader getImageLoader() {

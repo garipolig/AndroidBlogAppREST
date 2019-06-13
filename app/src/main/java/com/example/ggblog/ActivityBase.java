@@ -121,7 +121,8 @@ public abstract class ActivityBase extends AppCompatActivity {
     A Custom JsonArrayRequest, to be able to
     1) Extract the needed information from the Header Response, which is not retrieved by default.
     2) Use a custom caching mechanism, since the default implementation is completely relying on
-    what the sever returns in the "expires" or "max-age=" attributes, we don't have control on it.
+    what the sever returns in the HTTP cache headers of the response. Those information could also
+    be not present in the response. So we have no control on the caching mechanism.
     */
     private class CustomJsonArrayRequest extends JsonArrayRequest {
         /* Possible extension: make those values configurables in settings */
