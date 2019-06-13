@@ -24,7 +24,7 @@ public class Comment implements Parcelable {
     private String mUserName;
     private String mEmail;
     private String mAvatarUrl;
-    private String mPostId;
+    private Post mPost;
 
     public static final Creator<Comment> CREATOR
             = new Creator<Comment>() {
@@ -50,7 +50,7 @@ public class Comment implements Parcelable {
         dest.writeString(mUserName);
         dest.writeString(mEmail);
         dest.writeString(mAvatarUrl);
-        dest.writeString(mPostId);
+        dest.writeParcelable(mPost, flags);
     }
 
     private Comment(Parcel in) {
@@ -60,7 +60,7 @@ public class Comment implements Parcelable {
         mUserName = in.readString();
         mEmail = in.readString();
         mAvatarUrl = in.readString();
-        mPostId = in.readString();
+        mPost = in.readParcelable(Post.class.getClassLoader());
     }
 
     public Comment(JSONObject jsonObject) {
@@ -72,7 +72,12 @@ public class Comment implements Parcelable {
                 mUserName = jsonObject.getString(UrlParams.USERNAME);
                 mEmail = jsonObject.getString(UrlParams.EMAIL);
                 mAvatarUrl = jsonObject.getString(UrlParams.AVATAR_URL);
-                mPostId = jsonObject.getString(UrlParams.POST_ID);
+                /*
+                The JSON object received today, related to a comment, contains only
+                the post Id
+                */
+                mPost = new Post();
+                mPost.setId(jsonObject.getString(UrlParams.POST_ID));
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -88,7 +93,7 @@ public class Comment implements Parcelable {
         mUserName = null;
         mEmail = null;
         mAvatarUrl = null;
-        mPostId = null;
+        mPost = null;
     }
 
     public void setId(String id) {
@@ -115,8 +120,8 @@ public class Comment implements Parcelable {
         mAvatarUrl = avatarUrl;
     }
 
-    public void setPostId(String postId) {
-        mPostId = postId;
+    public void setPost(Post post) {
+        mPost = post;
     }
 
     public String getId() {
@@ -143,8 +148,8 @@ public class Comment implements Parcelable {
         return mAvatarUrl;
     }
 
-    public String getPostId() {
-        return mPostId;
+    public Post getPost() {
+        return mPost;
     }
 
     @Override
@@ -156,7 +161,7 @@ public class Comment implements Parcelable {
         stringBuilder.append("UserName=").append(mUserName).append(" - ");
         stringBuilder.append("Email=").append(mUserName).append(" - ");
         stringBuilder.append("Avatar URL=").append(mAvatarUrl).append(" - ");
-        stringBuilder.append("Post id=").append(mPostId);
+        stringBuilder.append("Post=").append(mPost);
         return stringBuilder.toString();
     }
 }

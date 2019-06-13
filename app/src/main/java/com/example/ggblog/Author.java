@@ -13,9 +13,6 @@ import org.json.JSONObject;
 Info passed between Activities through Intent.
 This allow us to avoid asking the Author information to server when passing from the Authors List
 to Author details, since this information has already been retrieved and saved into this object.
-
-Note: at the moment we don't need to store the posts associated to each author.
-We could add this functionality in the future, if really needed (for example as caching mechanism)
 */
 public class Author implements Parcelable {
 

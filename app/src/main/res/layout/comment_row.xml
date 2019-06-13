@@ -23,7 +23,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end"
-        android:textSize="14sp"/>
+        android:textSize="12dp"
+        android:textColor="@color/colorBlue"/>
 
     <TextView
         android:id="@+id/commentAuthorUsernameRow"
@@ -32,14 +33,16 @@
         android:layout_gravity="end"
         android:layout_below="@id/commentDateRow"
         android:textSize="14sp"
-        android:textStyle="bold"/>
+        android:textStyle="bold"
+        android:textColor="@color/colorLightRed"/>
 
     <TextView
         android:id="@+id/commentBodyRow"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/commentAuthorUsernameRow"
-        android:textSize="14sp"/>
+        android:textSize="14sp"
+        android:textColor="@color/colorDarkGrey"/>
 
     </RelativeLayout>
 

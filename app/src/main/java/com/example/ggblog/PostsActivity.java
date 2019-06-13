@@ -38,7 +38,7 @@ public class PostsActivity extends ActivityBase {
     /* To identify the Server requests made by this Activity, to cancel them if needed */
     private static final String REQUEST_TAG = "POSTS_LIST_REQUEST";
 
-    private String mCurrentAuthorId;
+    private Author mCurrentAuthor;
 
     private static final Class<?> NEXT_ACTIVITY = CommentsActivity.class;
 
@@ -100,7 +100,7 @@ public class PostsActivity extends ActivityBase {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate");
-        mCurrentAuthorId = null;
+        mCurrentAuthor = null;
         ActionBar actionBar = getSupportActionBar();
         NetworkImageView authorAvatarNetworkImageView = findViewById(R.id.authorAvatar);
         TextView authorNameTextView = findViewById(R.id.authorName);
@@ -123,7 +123,8 @@ public class PostsActivity extends ActivityBase {
                 Author author = intent.getParcelableExtra(EXTRA_MESSAGE);
                 if (author != null) {
                     if (VDBG) Log.d(TAG, "Author received=" + author);
-                    mCurrentAuthorId = author.getId();
+                    /* Storing the author globally for future usages */
+                    mCurrentAuthor = author;
                     authorNameTextView.setText(author.getName());
                     authorUserNameTextView.setText(author.getUserName());
                     authorEmailTextView.setText(author.getEmail());
@@ -131,7 +132,7 @@ public class PostsActivity extends ActivityBase {
                     setAuthorAddress(authorAddressTextView, author.getAddressLatitude(),
                             author.getAddressLongitude());
                     /* When activity is created, retrieve the Posts to show */
-                    retrieveInitialDataFromServer(author.getId());
+                    retrieveInitialDataFromServer(author);
                 } else {
                     Log.e(TAG, "Author is NULL");
                 }
@@ -195,6 +196,8 @@ public class PostsActivity extends ActivityBase {
                         Post post = new Post(jsonObject);
                         if (post != null) {
                             if (VDBG) Log.d(TAG, "Current Post " + post);
+                            /* Adding the author */
+                            post.setAuthor(mCurrentAuthor);
                             itemsList.add(post);
                         } else {
                             Log.e(TAG, "Unable to retrieve the current Post info");
@@ -232,7 +235,7 @@ public class PostsActivity extends ActivityBase {
                     Re-creating again the list of Posts with the new pagination, as if we were
                     starting again this Activity.
                     */
-                    retrieveInitialDataFromServer(mCurrentAuthorId);
+                    retrieveInitialDataFromServer(mCurrentAuthor);
                     break;
                 default:
                     break;
@@ -297,13 +300,17 @@ public class PostsActivity extends ActivityBase {
         super.handleServerResponse(isDataRetrievalSuccess);
     }
 
-    private void retrieveInitialDataFromServer(String authorId) {
-        if (VDBG) Log.d(TAG, "retrieveInitialDataFromServer AuthorId=" + authorId);
-        String requestUrl = computeFirstRequestUrl(authorId);
-        if (requestUrl != null && !requestUrl.isEmpty()) {
-            retrieveItemsList(requestUrl);
+    private void retrieveInitialDataFromServer(Author author) {
+        if (VDBG) Log.d(TAG, "retrieveInitialDataFromServer Author=" + author);
+        if (author != null) {
+            String requestUrl = computeFirstRequestUrl(author);
+            if (requestUrl != null && !requestUrl.isEmpty()) {
+                retrieveItemsList(requestUrl);
+            } else {
+                Log.e(TAG, "Unable to retrieve the request URL");
+            }
         } else {
-            Log.e(TAG, "Unable to retrieve the request URL");
+            Log.e(TAG, "Author is NULL");
         }
     }
 
@@ -313,21 +320,21 @@ public class PostsActivity extends ActivityBase {
     automatically populated with the correct URL Request, thanks to the Link section present in
     the Response header
     */
-    private String computeFirstRequestUrl(String authorId) {
-        if (VDBG) Log.d(TAG, "computeFirstRequestUrl AuthorId=" + authorId);
+    private String computeFirstRequestUrl(Author author) {
+        if (VDBG) Log.d(TAG, "computeFirstRequestUrl Author=" + author);
         String requestUrl = null;
-        if (authorId != null && !authorId.isEmpty()) {
+        if (author != null && author.getId() != null && !author.getId().isEmpty()) {
             String url = mWebServerUrlPref + "/" + mSubPagePref + "?" +
                     UrlParams.GET_PAGE_NUM + "=1";
             if (DBG) Log.d(TAG, "Initial URL is " + url);
             StringBuilder requestUrlSb = new StringBuilder(url);
-            addUrlParam(requestUrlSb, UrlParams.AUTHOR_ID, authorId);
+            addUrlParam(requestUrlSb, UrlParams.AUTHOR_ID, author.getId());
             addUrlParam(requestUrlSb, UrlParams.LIMIT_NUM_RESULTS, mMaxNumItemsPerPagePref);
             /* mItemsOrderingMethodPref is already in the good format. No need to use addUrlParam */
             requestUrlSb.append(mItemsOrderingMethodPref);
             requestUrl = requestUrlSb.toString();
         } else {
-            Log.e(TAG, "author id is NULL or empty");
+            Log.e(TAG, "author is NULL or its id is NULL or empty");
         }
         return requestUrl;
     }

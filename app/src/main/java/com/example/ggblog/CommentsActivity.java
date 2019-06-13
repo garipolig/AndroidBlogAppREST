@@ -44,7 +44,7 @@ public class CommentsActivity extends ActivityBase {
                     SettingsActivity.PREF_COMMENTS_ORDERING_METHOD_KEY
             ));
 
-    private String mCurrentPostId;
+    private Post mCurrentPost;
 
     /*
     Needed to fill the table (ListView) of Comments, using the specific row layout for the Comment
@@ -101,9 +101,10 @@ public class CommentsActivity extends ActivityBase {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate");
-        mCurrentPostId = null;
+        mCurrentPost = null;
         ActionBar actionBar = getSupportActionBar();
         NetworkImageView postImageNetworkImageView = findViewById(R.id.postImage);
+        TextView authorNameTextView = findViewById(R.id.authorName);
         TextView postDateTextView = findViewById(R.id.postDate);
         TextView postTitleTextView = findViewById(R.id.postTitle);
         TextView postBodyTextView = findViewById(R.id.postBody);
@@ -120,7 +121,14 @@ public class CommentsActivity extends ActivityBase {
                 Post post = intent.getParcelableExtra(EXTRA_MESSAGE);
                 if (post != null) {
                     if (VDBG) Log.d(TAG, "Post received=" + post);
-                    mCurrentPostId = post.getId();
+                    /* Storing the post globally for future usages */
+                    mCurrentPost = post;
+                    Author author = post.getAuthor();
+                    if (author != null) {
+                        authorNameTextView.setText(author.getName());
+                    } else {
+                        Log.e(TAG, "Unable to retrieve Author");
+                    }
                     String postDate = getString(R.string.unknown_date);
                     if (post.getDate() != null) {
                         postDate = formatDate(post.getDate());
@@ -141,7 +149,7 @@ public class CommentsActivity extends ActivityBase {
                         setImage(post.getImageUrl(), postImageNetworkImageView);
                     }
                     /* When activity is created, retrieve the Comments to show */
-                    retrieveInitialDataFromServer(post.getId());
+                    retrieveInitialDataFromServer(post);
                 } else {
                     Log.e(TAG, "Post is NULL");
                 }
@@ -195,6 +203,8 @@ public class CommentsActivity extends ActivityBase {
                         Comment comment = new Comment(jsonObject);
                         if (comment != null) {
                             if (VDBG) Log.d(TAG, "Current Comment " + comment);
+                            /* Adding the author */
+                            comment.setPost(mCurrentPost);
                             itemsList.add(comment);
                         } else {
                             Log.e(TAG, "Unable to retrieve the current Comment info");
@@ -232,7 +242,7 @@ public class CommentsActivity extends ActivityBase {
                     Re-creating again the list of Comments with the new pagination, as if we were
                     starting again this Activity.
                     */
-                    retrieveInitialDataFromServer(mCurrentPostId);
+                    retrieveInitialDataFromServer(mCurrentPost);
                     break;
                 default:
                     break;
@@ -304,13 +314,17 @@ public class CommentsActivity extends ActivityBase {
         super.handleServerResponse(isDataRetrievalSuccess);
     }
 
-    private void retrieveInitialDataFromServer(String postId) {
-        if (VDBG) Log.d(TAG, "retrieveInitialDataFromServer PostId=" + postId);
-        String requestUrl = computeFirstRequestUrl(postId);
-        if (requestUrl != null && !requestUrl.isEmpty()) {
-            retrieveItemsList(requestUrl);
+    private void retrieveInitialDataFromServer(Post post) {
+        if (VDBG) Log.d(TAG, "retrieveInitialDataFromServer Post=" + post);
+        if (post != null) {
+            String requestUrl = computeFirstRequestUrl(post);
+            if (requestUrl != null && !requestUrl.isEmpty()) {
+                retrieveItemsList(requestUrl);
+            } else {
+                Log.e(TAG, "invalid request URL");
+            }
         } else {
-            Log.e(TAG, "invalid request URL");
+            Log.e(TAG, "Post is NULL");
         }
     }
 
@@ -320,21 +334,21 @@ public class CommentsActivity extends ActivityBase {
     automatically populated with the correct URL Request, thanks to the Link section present in
     the Response header
     */
-    private String computeFirstRequestUrl(String postId) {
-        if (VDBG) Log.d(TAG, "computeFirstRequestUrl PostId=" + postId);
+    private String computeFirstRequestUrl(Post post) {
+        if (VDBG) Log.d(TAG, "computeFirstRequestUrl Post=" + post);
         String requestUrl = null;
-        if (postId != null && !postId.isEmpty()) {
+        if (post != null && post.getId() != null && !post.getId().isEmpty()) {
             String url = mWebServerUrlPref + "/" + mSubPagePref + "?" +
                     UrlParams.GET_PAGE_NUM + "=1";
             if (DBG) Log.d(TAG, "Initial URL is " + url);
             StringBuilder requestUrlSb = new StringBuilder(url);
-            addUrlParam(requestUrlSb, UrlParams.POST_ID, postId);
+            addUrlParam(requestUrlSb, UrlParams.POST_ID, post.getId());
             addUrlParam(requestUrlSb, UrlParams.LIMIT_NUM_RESULTS, mMaxNumItemsPerPagePref);
             /* mItemsOrderingMethodPref is already in the good format. No need to use addUrlParam */
             requestUrlSb.append(mItemsOrderingMethodPref);
             requestUrl = requestUrlSb.toString();
         } else {
-            Log.e(TAG, "post id is NULL or empty");
+            Log.e(TAG, "post is null or  its id is NULL or empty");
         }
         return requestUrl;
     }

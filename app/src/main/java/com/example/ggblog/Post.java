@@ -11,9 +11,6 @@ import org.json.JSONObject;
 Info passed between Activities through Intent.
 This allow us to avoid asking the Post information to server when passing from the Posts List
 to Post details, since this information has already been retrieved and saved into this object.
-
-Note: at the moment we don't need to store the comments associated to each post.
-We could add this functionality in the future, if really needed (for example as caching mechanism)
 */
 public class Post implements Parcelable {
 
@@ -24,7 +21,7 @@ public class Post implements Parcelable {
     private String mTitle;
     private String mBody;
     private String mImageUrl;
-    private String mAuthorId;
+    private Author mAuthor;
 
     public static final Creator<Post> CREATOR
             = new Creator<Post>() {
@@ -49,7 +46,7 @@ public class Post implements Parcelable {
         dest.writeString(mTitle);
         dest.writeString(mBody);
         dest.writeString(mImageUrl);
-        dest.writeString(mAuthorId);
+        dest.writeParcelable(mAuthor, flags);
     }
 
     private Post(Parcel in) {
@@ -58,7 +55,7 @@ public class Post implements Parcelable {
         mTitle = in.readString();
         mBody = in.readString();
         mImageUrl = in.readString();
-        mAuthorId = in.readString();
+        mAuthor = in.readParcelable(Author.class.getClassLoader());
     }
 
     public Post(JSONObject jsonObject) {
@@ -69,7 +66,9 @@ public class Post implements Parcelable {
                 mTitle = jsonObject.getString(UrlParams.TITLE);
                 mBody = jsonObject.getString(UrlParams.BODY);
                 mImageUrl = jsonObject.getString(UrlParams.IMAGE_URL);
-                mAuthorId = jsonObject.getString(UrlParams.AUTHOR_ID);
+                /* The JSON object received today, related to a post, contains only the author Id */
+                mAuthor = new Author();
+                mAuthor.setId(jsonObject.getString(UrlParams.AUTHOR_ID));
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -84,7 +83,7 @@ public class Post implements Parcelable {
         mTitle = null;
         mBody = null;
         mImageUrl = null;
-        mAuthorId = null;
+        mAuthor = null;
     }
 
     public void setId(String id) {
@@ -107,8 +106,8 @@ public class Post implements Parcelable {
         mImageUrl = imageUrl;
     }
 
-    public void setAuthorId(String authorId) {
-        mAuthorId = authorId;
+    public void setAuthor(Author author) {
+        mAuthor = author;
     }
 
     public String getId() {
@@ -131,8 +130,8 @@ public class Post implements Parcelable {
         return mImageUrl;
     }
 
-    public String getAuthorId() {
-        return mAuthorId;
+    public Author getAuthor() {
+        return mAuthor;
     }
 
     @Override
@@ -143,7 +142,7 @@ public class Post implements Parcelable {
         stringBuilder.append("Title=").append(mTitle).append(" - ");
         stringBuilder.append("Body=").append(mBody).append(" - ");
         stringBuilder.append("Image URL=").append(mImageUrl).append(" - ");
-        stringBuilder.append("Author id=").append(mAuthorId);
+        stringBuilder.append("Author=").append(mAuthor);
         return stringBuilder.toString();
     }
 }

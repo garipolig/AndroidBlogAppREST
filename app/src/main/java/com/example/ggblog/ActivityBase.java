@@ -226,7 +226,7 @@ public abstract class ActivityBase extends AppCompatActivity {
             String jsonStringHeaderLink = response.headers.get(JsonParams.RESPONSE_HEADER_LINK);
             if(DBG) Log.d(TAG, "Header Link: " + jsonStringHeaderLink);
             /*
-            The Header link contains al list of elements like that:
+            The Header link contains a list of elements like that:
             <http://sym-json-server.herokuapp.com/authors?_page=1>; rel="xxx"
             We need to extract the pageLink (value between <> and the associated
             pageRel (value in rel="xxx")
