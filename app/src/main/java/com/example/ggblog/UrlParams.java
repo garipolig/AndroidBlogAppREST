@@ -28,4 +28,7 @@ public final class UrlParams {
     /* E.g. http://sym-json-server.herokuapp.com/authors?_sort=name&_order=asc */
     public static final String ASC_ORDER = "asc";
     public static final String DESC_ORDER = "desc";
+
+    public static final String HTTP_HEADER = "http://";
+    public static final String HTTPS_HEADER = "https://";
 }

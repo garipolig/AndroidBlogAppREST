@@ -17,7 +17,7 @@ public class SettingsActivity extends AppCompatActivity {
 
     /* General Preferences */
     public static final String PREF_WEB_SERVER_URL_KEY = "webServerUrl";
-    public static final String PREF_WEB_SERVER_URL_DEFAULT = "http://sym-json-server.herokuapp.com";
+    public static final String PREF_WEB_SERVER_URL_DEFAULT = "https://sym-json-server.herokuapp.com";
     public static final String PREF_AUTO_REFRESH_KEY = "autoRefresh";
     public static final Boolean PREF_AUTO_REFRESH_DEFAULT = true;
 

@@ -118,6 +118,18 @@ public abstract class ActivityBase extends AppCompatActivity {
     private boolean mIsInfoUnavailable;
 
     /*
+    When setting the Web Server address in the User Settings, we could use HTTP or HTTPS.
+    In case the pagination is used when asking for the information (using _page=[page_number] as
+    parameter of the requested URL), we get a JSON answer from the Server which has in the header
+    the URLs to go to first/prev/next/last pages and we can use those URLs to ask for another page.
+    But we need to double-check that those URLs are coherent with the type of connection(HTPP/HTTPS)
+    we are using, to avoid being rejected by the server.
+    (e.g. I use HTTPS in the fist URL sent to the Server and I get an answer with URLS pages
+    containing HTTP: If I use them to ask a new page it won't work. HTTP has to be changed to HTTPS.
+    */
+    private boolean mIsHttpsConnection;
+
+    /*
     A Custom JsonArrayRequest, to be able to
     1) Extract the needed information from the Header Response, which is not retrieved by default.
     2) Use a custom caching mechanism, since the default implementation is completely relying on
@@ -230,6 +242,22 @@ public abstract class ActivityBase extends AppCompatActivity {
                 String currPageRel = matcherPageRel.group(1);
                 if (VDBG) Log.d(TAG, "PageLink=" + currPageLink + ", PageRel=" + currPageRel);
                 if (currPageLink != null && currPageRel != null) {
+                    /* Double check that the PageLink is coherent with the connection type */
+                    if (currPageLink.startsWith(UrlParams.HTTP_HEADER) &&
+                            mIsHttpsConnection) {
+                        /* Replacing HTTP with HTTPS */
+                        currPageLink = UrlParams.HTTPS_HEADER + currPageLink.substring(
+                                UrlParams.HTTP_HEADER.length());
+                        if (VDBG) Log.d(TAG, "PageLink contains HTTP but connection" +
+                                " is HTTPS. URL changed to " + currPageLink);
+                    } else if (currPageLink.startsWith(UrlParams.HTTPS_HEADER) &&
+                            !mIsHttpsConnection) {
+                        /* Replacing HTTPS with HTTP */
+                        currPageLink = UrlParams.HTTP_HEADER + currPageLink.substring(
+                                UrlParams.HTTPS_HEADER.length());
+                        if (VDBG) Log.d(TAG, "PageLink contains HTTPS but connection" +
+                                " is HTTP, URL changed to " + currPageLink);
+                    }
                     switch (currPageRel) {
                         case JsonParams.RESPONSE_HEADER_REL_FIRST_PAGE:
                             mFirstPageUrlRequest = currPageLink;
@@ -306,7 +334,19 @@ public abstract class ActivityBase extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate");
+        mLastUrlRequestSentToServer = null;
+        mCurrentPageUrlRequest = null;
+        mFirstPageUrlRequest = null;
+        mPrevPageUrlRequest = null;
+        mNextPageUrlRequest = null;
+        mLastPageUrlRequest = null;
         mIsInfoUnavailable = false;
+        mIsHttpsConnection = false;
+        mWebServerUrlPref = null;
+        mSubPagePref = null;
+        mIsAutoRefreshEnabledPref = false;
+        mMaxNumItemsPerPagePref = null;
+        mItemsOrderingMethodPref = null;
         setContentView(getContentView());
         Toolbar toolbar = findViewById(R.id.toolbar);
         mPageCountersTextView = findViewById(R.id.pageCounters);
@@ -727,6 +767,17 @@ public abstract class ActivityBase extends AppCompatActivity {
                             SettingsActivity.PREF_WEB_SERVER_URL_KEY,
                             SettingsActivity.PREF_WEB_SERVER_URL_DEFAULT);
                     if (DBG) Log.d(TAG, "Web Server URL=" + mWebServerUrlPref);
+                    /* Understanding if the connection is HTTP or HTTPS */
+                    if (mWebServerUrlPref.startsWith(UrlParams.HTTP_HEADER)) {
+                        if (DBG) Log.d(TAG, "Connection type is HTTP");
+                        mIsHttpsConnection = false;
+                    } else if (mWebServerUrlPref.startsWith(UrlParams.HTTPS_HEADER)) {
+                        if (DBG) Log.d(TAG, "Connection type is HTTPS");
+                        mIsHttpsConnection = true;
+                    } else {
+                        /* Possible improvement: preventing the user to provide wrong address */
+                        Log.e(TAG, "Invalid Web Server URL " + mWebServerUrlPref);
+                    }
                     break;
                 case SettingsActivity.PREF_AUTO_REFRESH_KEY:
                     mIsAutoRefreshEnabledPref = mSharedPreferences.getBoolean(
