@@ -1,5 +1,8 @@
 <resources>
     <string name="app_name">Blog</string>
+    <string name="authors_activity_title">Authors</string>
+    <string name="posts_activity_title">Posts</string>
+    <string name="comments_activity_title">Comments</string>
     <string name="settings_activity_title">Settings</string>
     <string name="action_settings">Settings</string>
     <string name="action_refresh">Refresh</string>

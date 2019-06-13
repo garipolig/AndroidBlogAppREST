@@ -25,7 +25,7 @@
         </activity>
         <activity
             android:name=".PostsActivity"
-            android:label="@string/app_name"
+            android:label="@string/posts_activity_title"
             android:launchMode="singleTop"
             android:parentActivityName=".MainActivity"
             android:theme="@style/AppTheme.NoActionBar"
@@ -33,7 +33,7 @@
         </activity>
         <activity
             android:name=".CommentsActivity"
-            android:label="@string/app_name"
+            android:label="@string/comments_activity_title"
             android:launchMode="singleTop"
             android:parentActivityName=".PostsActivity"
             android:theme="@style/AppTheme.NoActionBar"
