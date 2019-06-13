@@ -138,12 +138,12 @@ public class Post implements Parcelable {
     @Override
     public String toString() {
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("Id=" + mId + " - ");
-        stringBuilder.append("Date=" + mDate + " - ");
-        stringBuilder.append("Title=" + mTitle + " - ");
-        stringBuilder.append("Body=" + mBody + " - ");
-        stringBuilder.append("Image URL=" + mImageUrl);
-        stringBuilder.append("Author id=" + mAuthorId);
+        stringBuilder.append("Id=").append(mId).append(" - ");
+        stringBuilder.append("Date=").append(mDate).append(" - ");
+        stringBuilder.append("Title=").append(mTitle).append(" - ");
+        stringBuilder.append("Body=").append(mBody).append(" - ");
+        stringBuilder.append("Image URL=").append(mImageUrl).append(" - ");
+        stringBuilder.append("Author id=").append(mAuthorId);
         return stringBuilder.toString();
     }
 }

@@ -10,7 +10,13 @@
         <item name="windowNoTitle">true</item>
     </style>
 
-    <style name="Settings" parent="Theme.AppCompat" />
+    <style name="Settings" parent="Theme.AppCompat.Light.DarkActionBar">
+        <item name="android:listViewStyle">@style/ListViewStyle</item>
+    </style>
+
+    <style name="ListViewStyle" parent="@android:style/Widget.Material.Light.ListView">
+        <item name="android:overScrollMode">always</item>
+    </style>
 
     <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
 

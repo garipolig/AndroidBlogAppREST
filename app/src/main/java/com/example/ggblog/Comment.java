@@ -150,13 +150,13 @@ public class Comment implements Parcelable {
     @Override
     public String toString() {
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("Id=" + mId + " - ");
-        stringBuilder.append("Date=" + mDate + " - ");
-        stringBuilder.append("Body=" + mBody + " - ");
-        stringBuilder.append("UserName=" + mUserName + " - ");
-        stringBuilder.append("Email=" + mUserName + " - ");
-        stringBuilder.append("Avatar URL=" + mAvatarUrl + " - ");
-        stringBuilder.append("Post id=" + mPostId);
+        stringBuilder.append("Id=").append(mId).append(" - ");
+        stringBuilder.append("Date=").append(mDate).append(" - ");
+        stringBuilder.append("Body=").append(mBody).append(" - ");
+        stringBuilder.append("UserName=").append(mUserName).append(" - ");
+        stringBuilder.append("Email=").append(mUserName).append(" - ");
+        stringBuilder.append("Avatar URL=").append(mAvatarUrl).append(" - ");
+        stringBuilder.append("Post id=").append(mPostId);
         return stringBuilder.toString();
     }
 }

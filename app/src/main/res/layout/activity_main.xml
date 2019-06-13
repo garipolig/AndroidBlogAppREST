@@ -43,7 +43,7 @@
         android:layout_marginRight="20dp"
         android:layout_marginTop="230dp">
 
-        <include layout="@layout/items_list" />
+        <include layout="@layout/author_list" />
 
     </RelativeLayout>
 

@@ -80,14 +80,13 @@ public class CommentsActivity extends ActivityBase {
                     /* Default image until the network one is retrieved */
                     authorAvatarView.setDefaultImageResId(R.drawable.default_author_image);
                     setImage(comment.getAvatarUrl(), authorAvatarView);
-                    String date = getString(R.string.unknown_date);
+                    String commentDate = getString(R.string.unknown_date);
                     if (comment.getDate() != null) {
-                        date = formatDate(comment.getDate(),
-                                JsonParams.JSON_SERVER_DATE_FORMAT, UI_DATE_FORMAT);
+                        commentDate = formatDate(comment.getDate());
                     } else {
                         Log.e(TAG, "Unable to retrieve the Comment date");
                     }
-                    commentDateTextView.setText(date);
+                    commentDateTextView.setText(commentDate);
                     authorUserNameTextView.setText(comment.getUserName());
                     commentBodyTextView.setText(comment.getBody());
                 } else {
@@ -105,17 +104,16 @@ public class CommentsActivity extends ActivityBase {
         mCurrentPostId = null;
         ActionBar actionBar = getSupportActionBar();
         NetworkImageView postImageNetworkImageView = findViewById(R.id.postImage);
+        TextView postDateTextView = findViewById(R.id.postDate);
+        TextView postTitleTextView = findViewById(R.id.postTitle);
         TextView postBodyTextView = findViewById(R.id.postBody);
         if (actionBar != null && postImageNetworkImageView != null &&
-                postBodyTextView != null) {
+                postDateTextView != null && postTitleTextView != null && postBodyTextView != null) {
             /* Needed to show the back button on the TaskBar */
             actionBar.setDisplayHomeAsUpEnabled(true);
             actionBar.setDisplayShowHomeEnabled(true);
             /* Comments are not clickable */
             mItemsListContentListView.setOnItemClickListener(null);
-            /* Default image until the network one is retrieved */
-            postImageNetworkImageView.setDefaultImageResId(R.drawable.default_post_image);
-
             /* The Intent used to start this activity */
             Intent intent = getIntent();
             if (intent != null) {
@@ -123,8 +121,25 @@ public class CommentsActivity extends ActivityBase {
                 if (post != null) {
                     if (VDBG) Log.d(TAG, "Post received=" + post);
                     mCurrentPostId = post.getId();
+                    String postDate = getString(R.string.unknown_date);
+                    if (post.getDate() != null) {
+                        postDate = formatDate(post.getDate());
+                    } else {
+                        Log.e(TAG, "Unable to retrieve the Post date");
+                    }
+                    postDateTextView.setText(postDate);
+                    postTitleTextView.setText(post.getTitle());
                     postBodyTextView.setText(post.getBody());
-                    setImage(post.getImageUrl(), postImageNetworkImageView);
+                    /* It's not mandatory for a post to have an associated image */
+                    if (post.getImageUrl() != null && !post.getImageUrl().isEmpty()) {
+                        /* Showing the image placeholder (hidden by default)*/
+                        postImageNetworkImageView.setVisibility(View.VISIBLE);
+                        /* Show the default image until the network one is retrieved */
+                        postImageNetworkImageView.setDefaultImageResId(
+                                R.drawable.default_post_image);
+                        /* Retrieving image from server */
+                        setImage(post.getImageUrl(), postImageNetworkImageView);
+                    }
                     /* When activity is created, retrieve the Comments to show */
                     retrieveInitialDataFromServer(post.getId());
                 } else {
@@ -179,7 +194,7 @@ public class CommentsActivity extends ActivityBase {
                     if (jsonObject != null) {
                         Comment comment = new Comment(jsonObject);
                         if (comment != null) {
-                            if (VDBG) Log.d(TAG, "Current Comment " + comment.toString());
+                            if (VDBG) Log.d(TAG, "Current Comment " + comment);
                             itemsList.add(comment);
                         } else {
                             Log.e(TAG, "Unable to retrieve the current Comment info");

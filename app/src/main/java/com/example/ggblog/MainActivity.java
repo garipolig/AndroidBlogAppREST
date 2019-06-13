@@ -161,7 +161,7 @@ public class MainActivity extends ActivityBase {
                     if (jsonObject != null) {
                         Author author = new Author(jsonObject);
                         if (author != null) {
-                            if (VDBG) Log.d(TAG, "Current Author " + author.toString());
+                            if (VDBG) Log.d(TAG, "Current Author " + author);
                             itemsList.add(author);
                         } else {
                             Log.e(TAG, "Unable to retrieve the current Author info");

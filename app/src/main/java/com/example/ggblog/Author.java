@@ -171,15 +171,15 @@ public class Author implements Parcelable {
     @Override
     public String toString() {
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("Id=" + mId + " - ");
-        stringBuilder.append("Name=" + mName + " - ");
-        stringBuilder.append("User Name=" + mUserName + " - ");
-        stringBuilder.append("Email=" + mEmail + " - ");
-        stringBuilder.append("Avatar URL=" + mAvatarUrl + " - ");
-        stringBuilder.append(
-                "Address Latitude=" + mAddressCoordinates[LATITUDE_ARRAY_INDEX] + " - ");
-        stringBuilder.append(
-                "Address Longitude=" + mAddressCoordinates[LONGITUDE_ARRAY_INDEX]);
+        stringBuilder.append("Id=").append(mId).append(" - ");
+        stringBuilder.append("Name=").append(mName).append(" - ");
+        stringBuilder.append("User Name=").append(mUserName).append(" - ");
+        stringBuilder.append("Email=").append(mEmail).append(" - ");
+        stringBuilder.append("Avatar URL=").append(mAvatarUrl).append(" - ");
+        stringBuilder.append("Address Latitude=").append(
+                mAddressCoordinates[LATITUDE_ARRAY_INDEX]).append(" - ");
+        stringBuilder.append("Address Longitude=").append(
+                mAddressCoordinates[LONGITUDE_ARRAY_INDEX]);
         return stringBuilder.toString();
     }
 }

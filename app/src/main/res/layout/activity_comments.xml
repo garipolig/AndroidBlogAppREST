@@ -41,9 +41,9 @@
         android:orientation="vertical"
         android:layout_marginLeft="20dp"
         android:layout_marginRight="20dp"
-        android:layout_marginTop="230dp">
+        android:layout_marginTop="355dp">
 
-        <include layout="@layout/items_list" />
+        <include layout="@layout/comment_list" />
 
     </RelativeLayout>
 

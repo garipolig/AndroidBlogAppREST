@@ -65,7 +65,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     private static final String CONNECTIVITY_CHANGE_ACTION = "android.net.conn.CONNECTIVITY_CHANGE";
 
     /* The format to be used for displaying in UI */
-    protected static final String UI_DATE_FORMAT = "dd.MM.yyyy 'at' HH:mm:ss z" ;
+    private static final String UI_DATE_FORMAT = "dd.MM.yyyy 'at' HH:mm:ss z" ;
 
     private static final Class<?> MAIN_ACTIVITY = MainActivity.class;
 
@@ -470,7 +470,7 @@ public abstract class ActivityBase extends AppCompatActivity {
             if (VDBG) Log.d(TAG, "param=" + param + ", value=" + value);
             if (param != null && !param.isEmpty() &&
                     value != null && !value.isEmpty()) {
-                url.append("&" + param + "=" + value);
+                url.append("&").append(param).append("=").append(value);
                 if (DBG) Log.d(TAG, "New URL is " + url);
             } else {
                 Log.e(TAG, "Invalid param/value");
@@ -480,21 +480,21 @@ public abstract class ActivityBase extends AppCompatActivity {
         }
     }
 
-    /* Utility method (static) to change the date format */
-    protected static String formatDate(String date, String currentPattern, String newPattern) {
+    /* To change the date format coming from the Web Server to the specific format for the UI */
+    protected String formatDate(String date) {
         if (VDBG) Log.d(TAG, "formatDate");
         String formattedDate = null;
         if (date != null) {
             /* Formatting the date from currentPattern to newPattern */
             SimpleDateFormat dateFormatter =
-                    new SimpleDateFormat(currentPattern, Locale.getDefault());
+                    new SimpleDateFormat(JsonParams.JSON_SERVER_DATE_FORMAT, Locale.getDefault());
             try {
                 Date dateToFormat = dateFormatter.parse(date);
                 if (dateToFormat != null) {
-                    dateFormatter = new SimpleDateFormat(newPattern, Locale.getDefault());
+                    dateFormatter = new SimpleDateFormat(UI_DATE_FORMAT, Locale.getDefault());
                     formattedDate = dateFormatter.format(dateToFormat);
                 } else {
-                    Log.e(TAG, "Unable to format date coming from JSON Server");
+                    Log.e(TAG, "Unable to format date");
                 }
             } catch (ParseException e) {
                 e.printStackTrace();

@@ -80,14 +80,13 @@ public class PostsActivity extends ActivityBase {
                 TextView postDateTextView = view.findViewById(R.id.postDateRow);
                 TextView postTitleTextView = view.findViewById(R.id.postTitleRow);
                 if (postDateTextView != null && postTitleTextView != null) {
-                    String date = getString(R.string.unknown_date);
+                    String postDate = getString(R.string.unknown_date);
                     if (post.getDate() != null) {
-                        date = formatDate(post.getDate(),
-                                JsonParams.JSON_SERVER_DATE_FORMAT, UI_DATE_FORMAT);
+                        postDate = formatDate(post.getDate());
                     } else {
                         Log.e(TAG, "Unable to retrieve the Comment date");
                     }
-                    postDateTextView.setText(date);
+                    postDateTextView.setText(postDate);
                     postTitleTextView.setText(post.getTitle());
                 } else {
                     Log.e(TAG, "An error occurred while retrieving layout elements");
@@ -195,7 +194,7 @@ public class PostsActivity extends ActivityBase {
                     if (jsonObject != null) {
                         Post post = new Post(jsonObject);
                         if (post != null) {
-                            if (VDBG) Log.d(TAG, "Current Post " + post.toString());
+                            if (VDBG) Log.d(TAG, "Current Post " + post);
                             itemsList.add(post);
                         } else {
                             Log.e(TAG, "Unable to retrieve the current Post info");
