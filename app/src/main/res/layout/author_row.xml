@@ -1,7 +1,23 @@
-<TextView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/authorNameRow"
-    android:layout_width="fill_parent"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="10dp"
-    android:textSize="14sp"
-    android:textColor="@color/colorDarkGrey"/>
+    android:orientation="vertical"
+    android:padding="10dp">
+
+    <TextView
+        android:id="@+id/authorNameRow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:textSize="14sp"
+        android:textColor="@color/colorDarkGrey"/>
+
+    <TextView
+        android:id="@+id/authorUserNameRow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/authorNameRow"
+        android:textSize="12sp"
+        android:textColor="@color/colorLightRed"/>
+
+</RelativeLayout>

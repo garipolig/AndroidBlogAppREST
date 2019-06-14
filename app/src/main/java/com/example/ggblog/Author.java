@@ -10,7 +10,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 /*
-Info passed between Activities through Intent.
+Author Info that can be passed between Activities through Intent.
 This allow us to avoid asking the Author information to server when passing from the Authors List
 to Author details, since this information has already been retrieved and saved into this object.
 */

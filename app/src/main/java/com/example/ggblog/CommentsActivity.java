@@ -115,13 +115,15 @@ public class CommentsActivity extends ActivityBase {
             actionBar.setDisplayShowHomeEnabled(true);
             /* Comments are not clickable */
             mItemsListContentListView.setOnItemClickListener(null);
-            /* The Intent used to start this activity */
+            /* The Intent used to start this activity
+            Since this Activity is started by the PostsActivity, it will contain a Post
+            */
             Intent intent = getIntent();
             if (intent != null) {
                 Post post = intent.getParcelableExtra(EXTRA_MESSAGE);
                 if (post != null) {
                     if (VDBG) Log.d(TAG, "Post received=" + post);
-                    /* Storing the post globally for future usages */
+                    /* Storing the post globally for future usages (by other methods) */
                     mCurrentPost = post;
                     Author author = post.getAuthor();
                     if (author != null) {
@@ -145,7 +147,7 @@ public class CommentsActivity extends ActivityBase {
                         /* Show the default image until the network one is retrieved */
                         postImageNetworkImageView.setDefaultImageResId(
                                 R.drawable.default_post_image);
-                        /* Retrieving image from server */
+                        /* Retrieving image from server/cache */
                         setImage(post.getImageUrl(), postImageNetworkImageView);
                     }
                     /* When activity is created, retrieve the Comments to show */
@@ -170,6 +172,10 @@ public class CommentsActivity extends ActivityBase {
         return getString(R.string.comments_list);
     }
 
+    /*
+    Implementing this method because it's abstract in base class.
+    But it will be never called, since the comments are not clickable.
+    */
     protected void onItemClicked(int position) {
         if (VDBG) Log.d(TAG, "onItemClicked position=" + position);
         Log.e(TAG, "This method shall not be called: onItemClickListener is disabled");
@@ -292,13 +298,6 @@ public class CommentsActivity extends ActivityBase {
         } else {
             super.retrieveSetting(key);
         }
-    }
-
-    /* Implementing this method because it's abstract in base class, but it's doing nothing */
-    protected String getSelectedItemId(int position) {
-        if (VDBG) Log.d(TAG, "getSelectedItemId position=" + position);
-        Log.e(TAG, "This method cannot be called in this class. Comments are not clickable");
-        return null;
     }
 
     protected void handleServerResponse(JSONArray response) {

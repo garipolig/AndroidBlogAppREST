@@ -14,7 +14,7 @@
     <string name="button_prev_page">Prev Page</string>
     <string name="button_next_page">Next Page</string>
     <string name="button_last_page">Last Page</string>
-    <string name="error_message">Unable to retrieve data</string>
+    <string name="error_message">Unable to Retrieve Data</string>
     <string name="server_error_timeout">Timeout</string>
     <string name="server_error_no_connection">No Connection</string>
     <string name="server_error_authentication">Authentication Failure</string>
@@ -31,10 +31,11 @@
 
     <!-- General Preferences -->
     <string name="web_server_url_title">Web Server URL</string>
-    <string name="auto_refresh_title">Auto-Refresh</string>
-    <string name="auto_refresh_summary_on">Refresh when network becomes available. Performed
-        only if data retrieval has failed previously due to missing connection</string>
-    <string name="auto_refresh_summary_off">Refresh only when manually requested</string>
+    <string name="auto_retry_when_online_title">Auto-Retry when Online</string>
+    <string name="auto_retry_when_online_summary_on">Retry on network availability,
+        if data retrieval failed due to missing connection</string>
+    <string name="auto_retry_when_online_summary_off">Retry only when manually requested (use
+        Refresh button) </string>
     <string name="cache_hit_time_title">Cache Hit Time</string>
     <string name="cache_expiration_time_title">Cache Expiration Time</string>
 

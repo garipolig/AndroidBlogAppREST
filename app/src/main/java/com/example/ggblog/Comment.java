@@ -8,11 +8,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 /*
-Differently from Author and Post classes, this class is, at the moment, not passed through intent.
-In fact this class is used by the CommentsActivity which doesn't have any transitions to other
-activities (using intents).
-As of today, the only usage of this class is to fill a Comment object from a Json Object and to keep
-coherency with the rest of the code (just in case of future extensions)
+Comment Info that can be passed between Activities through Intent.
+This is not yet done in the current implementation, since the Comment List page is the last page
+of the UI and we can only go back.
 */
 public class Comment implements Parcelable {
 

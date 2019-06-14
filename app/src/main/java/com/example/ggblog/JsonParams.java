@@ -23,8 +23,10 @@ public final class JsonParams {
     rel="last"
     */
     public static final String RESPONSE_HEADER_LINK_REGEXP = "<([^\"]*)>";
+
     /* Page rel (first, next, prev, last) is in rel="[PAGE REL]" on the Page Link section */
     public static final String RESPONSE_HEADER_REL_REGEXP = "rel=\"([^\"]*)\"";
+
     /*
     Page number is in page=[PAGE NUMBER]> or page=[PAGE NUMBER]&
     It will depends on the position of the page parameter in URL (at the end or not)

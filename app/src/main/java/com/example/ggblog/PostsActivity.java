@@ -113,17 +113,17 @@ public class PostsActivity extends ActivityBase {
             /* Needed to show the back button on the TaskBar */
             actionBar.setDisplayHomeAsUpEnabled(true);
             actionBar.setDisplayShowHomeEnabled(true);
-
             /* Default image until the network one is retrieved */
             authorAvatarNetworkImageView.setDefaultImageResId(R.drawable.default_author_image);
-
-            /* The Intent used to start this activity */
+            /* The Intent used to start this activity
+            Since this Activity is started by the MainActivity, it will contain an Author
+            */
             Intent intent = getIntent();
             if (intent != null) {
                 Author author = intent.getParcelableExtra(EXTRA_MESSAGE);
                 if (author != null) {
                     if (VDBG) Log.d(TAG, "Author received=" + author);
-                    /* Storing the author globally for future usages */
+                    /* Storing the author globally for future usages (by other methods) */
                     mCurrentAuthor = author;
                     authorNameTextView.setText(author.getName());
                     authorUserNameTextView.setText(author.getUserName());

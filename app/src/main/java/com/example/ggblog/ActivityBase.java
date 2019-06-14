@@ -75,7 +75,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     private static final Set<String> PREFERENCES_KEYS =
             new HashSet<>(Arrays.asList(
                     SettingsActivity.PREF_WEB_SERVER_URL_KEY,
-                    SettingsActivity.PREF_AUTO_REFRESH_KEY,
+                    SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_KEY,
                     SettingsActivity.PREF_CACHE_HIT_TIME_KEY,
                     SettingsActivity.PREF_CACHE_EXPIRATION_TIME_KEY
             ));
@@ -86,12 +86,13 @@ public abstract class ActivityBase extends AppCompatActivity {
     /* Those preference are set through settings (shared preferences) */
     protected String mWebServerUrlPref;
     protected String mSubPagePref;
-    private boolean mIsAutoRefreshEnabledPref;
+    private boolean mIsAutoRetryWhenOnlineEnabledPref;
     private long mCacheHitTimePref;
     private long mCacheExpirationTimePref;
     protected String mMaxNumItemsPerPagePref;
 
-    /* Note: today in the user settings we are supporting only a single attribute for ordering
+    /*
+    Note: today in the user settings we are supporting only a single attribute for ordering
     It can be extended if needed.
     E.g. name ASC/DESC for Authors, date ASC/DESC for Posts and Comments
     */
@@ -135,7 +136,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     private boolean mIsHttpsConnection;
 
     /*
-    A Custom JsonArrayRequest, to be able to
+    A Custom JsonArrayRequest to be able to
     1) Extract the needed information from the Header Response, which is not retrieved by default.
     2) Use a custom caching mechanism, since the default implementation is completely relying on
     what the sever returns in the HTTP cache headers of the response. Those information could also
@@ -216,7 +217,7 @@ public abstract class ActivityBase extends AppCompatActivity {
         }
 
         /*
-        retrieving the Link section from the Response Header header
+        Retrieving the Link section from the Response Header header
         Since we are using pagination when retrieving the info (authors, posts, comments...),
         the Link is needed to retrieve the URL Requests to be used to move from the current page
         to the first/previous/next/last thanks to specific buttons
@@ -280,10 +281,7 @@ public abstract class ActivityBase extends AppCompatActivity {
         }
     }
 
-    /*
-    Needed to listen for changes in the Settings
-    At the moment we handle only the auto-refresh option, but we can add more options in the future
-    */
+    /* Needed to listen for changes in the Settings */
     private final SharedPreferences.OnSharedPreferenceChangeListener mSharedPreferenceListener =
             new SharedPreferences.OnSharedPreferenceChangeListener() {
         public void onSharedPreferenceChanged(SharedPreferences preference, String key) {
@@ -299,16 +297,16 @@ public abstract class ActivityBase extends AppCompatActivity {
             /* Synchronously retrieve the network connectivity */
             boolean isConnected = retrieveNetworkConnectivityStatus();
             if (isConnected) {
-                handleAutoRefresh();
+                handleAutoRetry();
             }
         }
     }
 
     /*
     Each Activity will have its own associated layout:
-    1) Header (different)
-    2) Content (same for all)
-    3) Buttons (same for all)
+    1) Header Section (different for each)
+    2) Content Section(different for each)
+    3) Pagination Buttons Section(same for all)
     */
     protected abstract int getContentView();
 
@@ -326,8 +324,8 @@ public abstract class ActivityBase extends AppCompatActivity {
     protected abstract void handleServerResponse(JSONArray response);
 
     /*
-    Each activity perform the request to the Web Server using a specific TAG, to be able to cancel
-    the ongoing requests when not yet sent to the network
+    Each activity perform the request to the Web Server using a specific TAG, to be able to
+    cancel the ongoing requests when not yet sent to the network (still in the queue on our side)
     */
     protected abstract String getRequestTag();
 
@@ -345,7 +343,7 @@ public abstract class ActivityBase extends AppCompatActivity {
         mIsHttpsConnection = false;
         mWebServerUrlPref = null;
         mSubPagePref = null;
-        mIsAutoRefreshEnabledPref = false;
+        mIsAutoRetryWhenOnlineEnabledPref = false;
         mCacheHitTimePref = -1;
         mCacheExpirationTimePref = -1;
         mMaxNumItemsPerPagePref = null;
@@ -454,17 +452,18 @@ public abstract class ActivityBase extends AppCompatActivity {
     This method is called to retrieve the list of items to be displayed on the current activity.
     E.g. the Authors list in the MainActivity, the Post list in the PostsActivity and the Comments
     in the CommentsActivity.
-    This is done when clicking on First/Prev/Next/Last pages or when clicking refresh.
+    This is done when clicking on First/Prev/Next/Last pages or when clicking on Refresh button.
     */
     protected void retrieveItemsList(String url) {
         if (VDBG) Log.d(TAG, "retrieveItemsList URL=" + url);
         if (url != null && !url.isEmpty()) {
             if (VDBG) Log.d(TAG, "URL=" + url);
 
-            /* Cancel all the ongoing requests (if any) related to the previous URL requested.
-            This can happens for example when the user ask for a new page while the results for the
-            current page has not yet been sent by the server.
-             */
+            /*
+            Cancel all the ongoing requests (if any) related to the previous URL requested.
+            This can happens for example when the user ask for a new page while the results for
+            the current page has not yet been threaded by the server.
+            */
             NetworkRequestUtils.getInstance(
                     getApplicationContext()).cancelAllRequests(getRequestTag());
             /* Updating the old URL Request with the new one */
@@ -539,7 +538,7 @@ public abstract class ActivityBase extends AppCompatActivity {
         }
     }
 
-    /* To change the date format coming from the Web Server to the specific format for the UI */
+    /* To change the date format coming from the Web Server to the specific format for our UI */
     protected String formatDate(String date) {
         if (VDBG) Log.d(TAG, "formatDate");
         String formattedDate = null;
@@ -588,6 +587,7 @@ public abstract class ActivityBase extends AppCompatActivity {
         updateListView(arrayList);
     }
 
+    /* The image will be retrieved from server if not available on cache */
     protected void setImage(String url, NetworkImageView networkImageView) {
         if (VDBG) Log.d(TAG, "setImage URL=" + url);
         if (url != null && !url.isEmpty()) {
@@ -611,8 +611,9 @@ public abstract class ActivityBase extends AppCompatActivity {
     }
 
     /*
-    Note that the lastPageRequestUrl=null (server doesn't send it) when we have only 1 page
-    currentPageRequestUrl cannot be null, unless a problem occurred
+    Note that lastPageRequestUrl=null occurs when we have only 1 page of results from server, and
+    so the server doesn't send the information about the last page, since equal to current page.
+    Instead currentPageRequestUrl cannot be null, unless a problem occurred
     */
     private void updatePageCounters() {
         if (VDBG) Log.d(TAG, "updatePageCounters currPageUrl=" + mCurrentPageUrlRequest +
@@ -652,6 +653,7 @@ public abstract class ActivityBase extends AppCompatActivity {
                 lastPageNum);
     }
 
+    /* The buttons will reflect the URL sent by the server and present in the response header */
     private void updateAvailableButtons(boolean forceDisabling) {
         if (VDBG) Log.d(TAG, "updateAvailableButtons forceDisabling=" + forceDisabling);
         /* Enable/Disable the buttons according to the available page request */
@@ -673,7 +675,6 @@ public abstract class ActivityBase extends AppCompatActivity {
         if (VDBG) Log.d(TAG, "refresh");
         /* First of all clearing the cache */
         NetworkRequestUtils.getInstance(this.getApplicationContext()).clearCache();
-
         /*
         mCurrentPageUrlRequest is the current page url returned by the Web Server.
         It won't be set in case we didn't succeed to contact the Server.
@@ -729,15 +730,15 @@ public abstract class ActivityBase extends AppCompatActivity {
     }
 
     /*
-    The refresh is made once the network becomes available and only if we didn't succeed  previously
-    to retrieve the info from server and if the auto-refresh option is enabled in Settings
+    The retry is made once the network becomes available and only if we didn't succeed  previously
+    to retrieve the info from server and if the auto-retry option is enabled in Settings
     */
-    private void handleAutoRefresh() {
-        if (VDBG) Log.d(TAG, "handleAutoRefresh");
-        if (mIsInfoUnavailable && mIsAutoRefreshEnabledPref) {
+    private void handleAutoRetry() {
+        if (VDBG) Log.d(TAG, "handleAutoRetry");
+        if (mIsInfoUnavailable && mIsAutoRetryWhenOnlineEnabledPref) {
             refresh();
         } else {
-            if (VDBG) Log.d(TAG, "Info already available or auto-refresh disabled");
+            if (VDBG) Log.d(TAG, "Info already available or auto-retry disabled");
         }
     }
 
@@ -763,11 +764,11 @@ public abstract class ActivityBase extends AppCompatActivity {
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(intent);
                     break;
-                case SettingsActivity.PREF_AUTO_REFRESH_KEY:
+                case SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_KEY:
                     /* Synchronously retrieve the network connectivity */
                     boolean isConnected = retrieveNetworkConnectivityStatus();
                     if (isConnected) {
-                        handleAutoRefresh();
+                        handleAutoRetry();
                     }
                 case SettingsActivity.PREF_CACHE_HIT_TIME_KEY:
                 case SettingsActivity.PREF_CACHE_EXPIRATION_TIME_KEY:
@@ -800,15 +801,16 @@ public abstract class ActivityBase extends AppCompatActivity {
                         if (DBG) Log.d(TAG, "Connection type is HTTPS");
                         mIsHttpsConnection = true;
                     } else {
-                        /* Possible improvement: preventing the user to provide wrong address */
+                        /* TODO: preventing the user to provide malformed address in the UI */
                         Log.e(TAG, "Invalid Web Server URL " + mWebServerUrlPref);
                     }
                     break;
-                case SettingsActivity.PREF_AUTO_REFRESH_KEY:
-                    mIsAutoRefreshEnabledPref = mSharedPreferences.getBoolean(
-                            SettingsActivity.PREF_AUTO_REFRESH_KEY,
-                            SettingsActivity.PREF_AUTO_REFRESH_DEFAULT);
-                    if (DBG) Log.d(TAG, "Auto-Refresh Enabled=" + mIsAutoRefreshEnabledPref);
+                case SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_KEY:
+                    mIsAutoRetryWhenOnlineEnabledPref = mSharedPreferences.getBoolean(
+                            SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_KEY,
+                            SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_DEFAULT);
+                    if (DBG) Log.d(TAG, "Auto-Retry When Online Enabled=" +
+                            mIsAutoRetryWhenOnlineEnabledPref);
                     break;
                 case SettingsActivity.PREF_CACHE_HIT_TIME_KEY:
                     mCacheHitTimePref = Long.parseLong(mSharedPreferences.getString(

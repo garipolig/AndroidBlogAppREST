@@ -69,14 +69,11 @@ public class MainActivity extends ActivityBase {
             }
             Author author = getItem(position);
             if (author != null) {
-                /*
-                As of today only the Author name is displayed.
-                In case of future extensions, just update the row layout author_row.xml and add
-                the related code here
-                */
                 TextView authorNameTextView = view.findViewById(R.id.authorNameRow);
-                if (authorNameTextView != null) {
+                TextView authorUserNameTextView = view.findViewById(R.id.authorUserNameRow);
+                if (authorNameTextView != null && authorUserNameTextView != null) {
                     authorNameTextView.setText(author.getName());
+                    authorUserNameTextView.setText(author.getUserName());
                 } else {
                     Log.e(TAG, "An error occurred while retrieving layout elements");
                 }
@@ -89,20 +86,19 @@ public class MainActivity extends ActivityBase {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate");
-        /*
-        In case this Activity has been started by another Activity, asking to close the whole
-        application.
-        This activity in the normal scenario is not started through intent
-        */
+        /* Check if this activity has been started by another activity using an Intent */
         Intent intent = getIntent();
+        /* Check if the intent has an extra EXTRA_EXIT, which means that a request to close
+        the full application has been received (because only the MainActivity can do that)
+        */
         if (intent != null && getIntent().getBooleanExtra(EXTRA_EXIT, false)) {
             if (VDBG) Log.d(TAG, "Received request to close the application");
             exitApplication();
             return;
         }
         /*
-        Making sure the cache (on disk) is cleared when the application starts, to have fresh data.
-        It's up to the MainActivity(the application entry point) to do that
+        Making sure the cache is cleared when the application starts, to have fresh data.
+        It's up to the MainActivity (the application entry point) to do that
         */
         NetworkRequestUtils.getInstance(this.getApplicationContext()).clearCache();
 

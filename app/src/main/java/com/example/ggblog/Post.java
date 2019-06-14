@@ -8,7 +8,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 /*
-Info passed between Activities through Intent.
+Post Info that cam be passed between Activities through Intent.
 This allow us to avoid asking the Post information to server when passing from the Posts List
 to Post details, since this information has already been retrieved and saved into this object.
 */

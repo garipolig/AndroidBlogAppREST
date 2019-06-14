@@ -6,10 +6,11 @@
 
     <ImageView
         android:id="@+id/coverImage"
-        android:layout_width="250dp"
+        android:layout_width="match_parent"
         android:layout_height="150dp"
         android:layout_centerHorizontal="true"
+        android:layout_marginTop="10dp"
         android:contentDescription="@string/cover_image_desc"
-        app:srcCompat="@drawable/blog_cover" />
+        app:srcCompat="@drawable/cover_image" />
 
 </RelativeLayout>

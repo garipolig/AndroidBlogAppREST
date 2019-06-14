@@ -9,11 +9,11 @@
             app:useSimpleSummaryProvider="true"/>
 
         <SwitchPreferenceCompat
-            app:key="autoRefresh"
+            app:key="autoRetryWhenOnline"
             app:defaultValue="true"
-            app:summaryOff="@string/auto_refresh_summary_off"
-            app:summaryOn="@string/auto_refresh_summary_on"
-            app:title="@string/auto_refresh_title" />
+            app:summaryOff="@string/auto_retry_when_online_summary_off"
+            app:summaryOn="@string/auto_retry_when_online_summary_on"
+            app:title="@string/auto_retry_when_online_title" />
 
         <ListPreference
             app:key="cacheHitTime"

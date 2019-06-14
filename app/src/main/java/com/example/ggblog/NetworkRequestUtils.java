@@ -12,6 +12,10 @@ import com.android.volley.toolbox.ImageLoader;
 import com.android.volley.toolbox.Volley;
 import com.android.volley.Request;
 
+/*
+Singleton to have a single entry point which handles the communication with the Web
+Server and handles the cache
+*/
 public class NetworkRequestUtils {
 
     private static final String TAG = "NetworkRequestUtils";
@@ -85,7 +89,7 @@ public class NetworkRequestUtils {
         }
     }
 
-    /* Clear a specific entry of the cache */
+    /* Clear a specific entry (JSON, bitmap...) of the cache */
     public void clearCache(String url) {
         if (VDBG) Log.d(TAG, "clearCache URL=" + url);
         Cache cache = getRequestQueue().getCache();
@@ -96,7 +100,7 @@ public class NetworkRequestUtils {
         }
     }
 
-    /* Invalidate a specific entry of the cache */
+    /* Invalidate a specific entry (JSON, bitmap...) of the cache */
     public void invalidateCache(String url) {
         if (VDBG) Log.d(TAG, "invalidateCache URL=" + url);
         Cache cache = getRequestQueue().getCache();
@@ -107,7 +111,7 @@ public class NetworkRequestUtils {
         }
     }
 
-    /* The entry needs to be converted into the correct format (Json, bitmap...) */
+    /* The retrieved entry needs to be converted into the correct format (JSON, bitmap...) */
     public Entry getEntryFromCache(String url) {
         if (VDBG) Log.d(TAG, "getEntryFromCache URL=" + url);
         Entry entry = null;
