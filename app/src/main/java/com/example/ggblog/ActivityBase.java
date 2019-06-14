@@ -75,7 +75,9 @@ public abstract class ActivityBase extends AppCompatActivity {
     private static final Set<String> PREFERENCES_KEYS =
             new HashSet<>(Arrays.asList(
                     SettingsActivity.PREF_WEB_SERVER_URL_KEY,
-                    SettingsActivity.PREF_AUTO_REFRESH_KEY
+                    SettingsActivity.PREF_AUTO_REFRESH_KEY,
+                    SettingsActivity.PREF_CACHE_HIT_TIME_KEY,
+                    SettingsActivity.PREF_CACHE_EXPIRATION_TIME_KEY
             ));
 
     private NetworkChangeReceiver mNetworkChangeReceiver;
@@ -85,7 +87,10 @@ public abstract class ActivityBase extends AppCompatActivity {
     protected String mWebServerUrlPref;
     protected String mSubPagePref;
     private boolean mIsAutoRefreshEnabledPref;
+    private long mCacheHitTimePref;
+    private long mCacheExpirationTimePref;
     protected String mMaxNumItemsPerPagePref;
+
     /* Note: today in the user settings we are supporting only a single attribute for ordering
     It can be extended if needed.
     E.g. name ASC/DESC for Authors, date ASC/DESC for Posts and Comments
@@ -137,14 +142,6 @@ public abstract class ActivityBase extends AppCompatActivity {
     be not present in the response. So we have no control on the caching mechanism.
     */
     private class CustomJsonArrayRequest extends JsonArrayRequest {
-        /* Possible extension: make those values configurables in settings */
-        private static final boolean USE_CUSTOM_CACHING_STRATEGY = true;
-
-        /* When the cache will be hit, but also refreshed on background */
-        private static final long CACHE_HIT_TIME = 3 * 60 * 1000; // 3 minutes
-
-        /* When the cache entry expires completely */
-        private static final long CACHE_EXPIRATION_TIME = 24 * 60 * 60 * 1000; // 24 hours
 
         private final String mRequestedUrl;
 
@@ -167,11 +164,13 @@ public abstract class ActivityBase extends AppCompatActivity {
                 final String jsonStringData = new String(response.data,
                         HttpHeaderParser.parseCharset(response.headers, PROTOCOL_CHARSET));
                 computePageUrlRequests(response);
-                if (USE_CUSTOM_CACHING_STRATEGY) {
+                /* -1 means value not initialized */
+                if (mCacheHitTimePref != -1 && mCacheExpirationTimePref != -1) {
                     Cache.Entry cacheEntry = configureCustomCacheFromResponse(response);
                     return Response.success(new JSONArray(
                             jsonStringData), cacheEntry);
                 } else {
+                    /* Default caching mechanism will be used */
                     return Response.success(new JSONArray(
                             jsonStringData), HttpHeaderParser.parseCacheHeaders(response));
                 }
@@ -183,15 +182,17 @@ public abstract class ActivityBase extends AppCompatActivity {
         }
 
         private Cache.Entry configureCustomCacheFromResponse(NetworkResponse response) {
-            if (VDBG) Log.d(TAG, "configureCustomCacheFromResponse");
+            if (VDBG) Log.d(TAG, "configureCustomCacheFromResponse." +
+                    " Cache Hit Time=" + mCacheHitTimePref +
+                    " Cache Expiration Time=" + mCacheExpirationTimePref);
             Cache.Entry cacheEntry = HttpHeaderParser.parseCacheHeaders(response);
             if (cacheEntry == null) {
                 cacheEntry = new Cache.Entry();
             }
             long now = System.currentTimeMillis();
-            final long softTtl = now + CACHE_HIT_TIME;
+            final long softTtl = now + mCacheHitTimePref;
             if(VDBG) Log.d(TAG, "Cache Soft TTL=" + softTtl );
-            final long ttl = now + CACHE_EXPIRATION_TIME;
+            final long ttl = now + mCacheExpirationTimePref;
             if(VDBG) Log.d(TAG, "Cache TTL=" + ttl);
             cacheEntry.data = response.data;
             cacheEntry.softTtl = softTtl;
@@ -345,6 +346,8 @@ public abstract class ActivityBase extends AppCompatActivity {
         mWebServerUrlPref = null;
         mSubPagePref = null;
         mIsAutoRefreshEnabledPref = false;
+        mCacheHitTimePref = -1;
+        mCacheExpirationTimePref = -1;
         mMaxNumItemsPerPagePref = null;
         mItemsOrderingMethodPref = null;
         setContentView(getContentView());
@@ -446,10 +449,25 @@ public abstract class ActivityBase extends AppCompatActivity {
         return true;
     }
 
+
+    /*
+    This method is called to retrieve the list of items to be displayed on the current activity.
+    E.g. the Authors list in the MainActivity, the Post list in the PostsActivity and the Comments
+    in the CommentsActivity.
+    This is done when clicking on First/Prev/Next/Last pages or when clicking refresh.
+    */
     protected void retrieveItemsList(String url) {
         if (VDBG) Log.d(TAG, "retrieveItemsList URL=" + url);
         if (url != null && !url.isEmpty()) {
             if (VDBG) Log.d(TAG, "URL=" + url);
+
+            /* Cancel all the ongoing requests (if any) related to the previous URL requested.
+            This can happens for example when the user ask for a new page while the results for the
+            current page has not yet been sent by the server.
+             */
+            NetworkRequestUtils.getInstance(
+                    getApplicationContext()).cancelAllRequests(getRequestTag());
+            /* Updating the old URL Request with the new one */
             mLastUrlRequestSentToServer = url;
             /*
             Those values will be set once we receive the answer from the Server
@@ -751,6 +769,13 @@ public abstract class ActivityBase extends AppCompatActivity {
                     if (isConnected) {
                         handleAutoRefresh();
                     }
+                case SettingsActivity.PREF_CACHE_HIT_TIME_KEY:
+                case SettingsActivity.PREF_CACHE_EXPIRATION_TIME_KEY:
+                    /*
+                    Clearing the whole cache: the new caching mechanism will be taken into
+                    account starting from the next request to the Server
+                    */
+                    NetworkRequestUtils.getInstance(this.getApplicationContext()).clearCache();
                     break;
                 default:
                     break;
@@ -784,6 +809,18 @@ public abstract class ActivityBase extends AppCompatActivity {
                             SettingsActivity.PREF_AUTO_REFRESH_KEY,
                             SettingsActivity.PREF_AUTO_REFRESH_DEFAULT);
                     if (DBG) Log.d(TAG, "Auto-Refresh Enabled=" + mIsAutoRefreshEnabledPref);
+                    break;
+                case SettingsActivity.PREF_CACHE_HIT_TIME_KEY:
+                    mCacheHitTimePref = Long.parseLong(mSharedPreferences.getString(
+                            SettingsActivity.PREF_CACHE_HIT_TIME_KEY,
+                            SettingsActivity.PREF_CACHE_HIT_TIME_DEFAULT));
+                    if (DBG) Log.d(TAG, "Cache Hit Time=" + mCacheHitTimePref);
+                    break;
+                case SettingsActivity.PREF_CACHE_EXPIRATION_TIME_KEY:
+                    mCacheExpirationTimePref = Long.parseLong(mSharedPreferences.getString(
+                            SettingsActivity.PREF_CACHE_EXPIRATION_TIME_KEY,
+                            SettingsActivity.PREF_CACHE_EXPIRATION_TIME_DEFAULT));
+                    if (DBG) Log.d(TAG, "Cache Expiration Time=" + mCacheExpirationTimePref);
                     break;
                 default:
                     break;

@@ -20,6 +20,10 @@ public class SettingsActivity extends AppCompatActivity {
     public static final String PREF_WEB_SERVER_URL_DEFAULT = "https://sym-json-server.herokuapp.com";
     public static final String PREF_AUTO_REFRESH_KEY = "autoRefresh";
     public static final Boolean PREF_AUTO_REFRESH_DEFAULT = true;
+    public static final String PREF_CACHE_HIT_TIME_KEY = "cacheHitTime";
+    public static final String PREF_CACHE_HIT_TIME_DEFAULT = "180000"; // 3 minutes in ms
+    public static final String PREF_CACHE_EXPIRATION_TIME_KEY = "cacheExpirationTime";
+    public static final String PREF_CACHE_EXPIRATION_TIME_DEFAULT = "86400000"; // 24 hours in ms
 
     /* Authors Preferences */
     public static final String PREF_AUTHORS_SUB_PAGE_KEY = "authorsSubPage";

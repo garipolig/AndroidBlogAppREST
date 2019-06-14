@@ -35,6 +35,8 @@
     <string name="auto_refresh_summary_on">Refresh when network becomes available. Performed
         only if data retrieval has failed previously due to missing connection</string>
     <string name="auto_refresh_summary_off">Refresh only when manually requested</string>
+    <string name="cache_hit_time_title">Cache Hit Time</string>
+    <string name="cache_expiration_time_title">Cache Expiration Time</string>
 
     <!-- Authors Page Preferences -->
     <string name="authors_sub_page_title">Web Server Sub Page</string>

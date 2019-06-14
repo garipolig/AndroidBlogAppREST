@@ -15,6 +15,22 @@
             app:summaryOn="@string/auto_refresh_summary_on"
             app:title="@string/auto_refresh_title" />
 
+        <ListPreference
+            app:key="cacheHitTime"
+            app:defaultValue="180000"
+            app:entries="@array/cache_hit_time_entries"
+            app:entryValues="@array/cache_hit_time_values"
+            app:title="@string/cache_hit_time_title"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:key="cacheExpirationTime"
+            app:defaultValue="86400000"
+            app:entries="@array/cache_expiration_time_entries"
+            app:entryValues="@array/cache_expiration_time_values"
+            app:title="@string/cache_expiration_time_title"
+            app:useSimpleSummaryProvider="true" />
+
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/author_prefs_header">

@@ -1,4 +1,53 @@
 <resources>
+
+    <string-array name="cache_hit_time_entries">
+        <item>5 seconds</item>
+        <item>15 seconds</item>
+        <item>30 seconds</item>
+        <item>1 minute</item>
+        <item>3 minutes</item>
+        <item>5 minutes</item>
+        <item>10 minutes</item>
+        <item>15 minutes</item>
+        <item>30 minutes</item>
+    </string-array>
+    <!-- Cache Hit Time is expressed in ms -->
+    <string-array name="cache_hit_time_values">
+        <item>5000</item>
+        <item>15000</item>
+        <item>30000</item>
+        <item>60000</item>
+        <item>180000</item>
+        <item>300000</item>
+        <item>600000</item>
+        <item>900000</item>
+        <item>3600000</item>
+    </string-array>
+
+    <string-array name="cache_expiration_time_entries">
+        <item>5 minutes</item>
+        <item>10 minutes</item>
+        <item>30 minutes</item>
+        <item>1 hour</item>
+        <item>5 hours</item>
+        <item>8 hours</item>
+        <item>12 hours</item>
+        <item>1 day</item>
+        <item>2 days</item>
+    </string-array>
+    <!-- Cache Expiration Time is expressed in ms -->
+    <string-array name="cache_expiration_time_values">
+        <item>300000</item>
+        <item>600000</item>
+        <item>1800000</item>
+        <item>3600000</item>
+        <item>18000000</item>
+        <item>28800000</item>
+        <item>43200000</item>
+        <item>86400000</item>
+        <item>172800000</item>
+    </string-array>
+
     <!-- Sorting/Ordering Preference -->
     <string-array name="authors_ordering_method_entries">
         <item>NAME (A->Z)</item>
