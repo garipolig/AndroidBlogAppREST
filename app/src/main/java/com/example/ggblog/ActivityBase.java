@@ -67,8 +67,6 @@ public abstract class ActivityBase extends AppCompatActivity {
     /* The format to be used for displaying in UI */
     private static final String UI_DATE_FORMAT = "dd.MM.yyyy 'at' HH:mm:ss z" ;
 
-    private static final Class<?> MAIN_ACTIVITY = MainActivity.class;
-
     /*
     SharedPreferences in common for all the Activities
     */
@@ -99,6 +97,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     protected String mItemsOrderingMethodPref;
 
     private TextView mPageCountersTextView;
+    protected TextView mItemsListTitleTextView;
     protected ListView mItemsListContentListView;
     private Button mFirstPageButton;
     private Button mPrevPageButton;
@@ -119,6 +118,9 @@ public abstract class ActivityBase extends AppCompatActivity {
     private String mNextPageUrlRequest;
     /* Last page URL retrieved from the Link section of the server response header */
     private String mLastPageUrlRequest;
+
+    /* Total number of items of a given type (authors, posts, comments) present on the Server DB */
+    protected String mTotalNumberOfItemsInServer;
 
     /* True when we are not able to retrieve data from server */
     private boolean mIsInfoUnavailable;
@@ -225,6 +227,11 @@ public abstract class ActivityBase extends AppCompatActivity {
         private void computePageUrlRequests(NetworkResponse response) {
             if (VDBG) Log.d(TAG, "computePageUrlRequests");
             if(DBG) Log.d(TAG, "Full Header: " + response.headers);
+            /* The response header contains the Total Number of items stored in the Server */
+            mTotalNumberOfItemsInServer = response.headers.get(JsonParams.RESPONSE_TOTAL_COUNT);
+            if(DBG) Log.d(TAG, "Total Number of Items on Server: "
+                    + mTotalNumberOfItemsInServer);
+            /* Extracting the Link parameter from the Header */
             String jsonStringHeaderLink = response.headers.get(JsonParams.RESPONSE_HEADER_LINK);
             if(DBG) Log.d(TAG, "Header Link: " + jsonStringHeaderLink);
             /*
@@ -310,9 +317,6 @@ public abstract class ActivityBase extends AppCompatActivity {
     */
     protected abstract int getContentView();
 
-    /* Title to be displayed on top of the Table */
-    protected abstract String getListTitle();
-
     /*
     Each Activity knows what to do when an item (author, post...) is selected (clicked) "
     */
@@ -339,6 +343,7 @@ public abstract class ActivityBase extends AppCompatActivity {
         mPrevPageUrlRequest = null;
         mNextPageUrlRequest = null;
         mLastPageUrlRequest = null;
+        mTotalNumberOfItemsInServer = null;
         mIsInfoUnavailable = false;
         mIsHttpsConnection = false;
         mWebServerUrlPref = null;
@@ -351,20 +356,19 @@ public abstract class ActivityBase extends AppCompatActivity {
         setContentView(getContentView());
         Toolbar toolbar = findViewById(R.id.toolbar);
         mPageCountersTextView = findViewById(R.id.pageCounters);
-        TextView itemsListTitleTextView = findViewById(R.id.itemsListTitle);
+        /* Its value will be set once we retrieve the Total Number of items available on Server */
+        mItemsListTitleTextView = findViewById(R.id.itemsListTitle);
         mItemsListContentListView = findViewById(R.id.itemsListContent);
         mFirstPageButton = findViewById(R.id.buttonFirstPage);
         mPrevPageButton = findViewById(R.id.buttonPrevPage);
         mNextPageButton = findViewById(R.id.buttonNextPage);
         mLastPageButton = findViewById(R.id.buttonLastPage);
-        if (toolbar != null && mPageCountersTextView != null && itemsListTitleTextView != null &&
+        if (toolbar != null && mPageCountersTextView != null && mItemsListTitleTextView != null &&
                 mItemsListContentListView != null && mFirstPageButton != null &&
                 mPrevPageButton != null && mNextPageButton != null && mLastPageButton != null) {
             registerSharedPreferencesListener();
             registerNetworkChangeReceiver();
             setSupportActionBar(toolbar);
-            /* Each Activity will have a different implementation of getListTitle() */
-            itemsListTitleTextView.setText(getListTitle());
             mItemsListContentListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 public void onItemClick(AdapterView<?> parent, final View view,
                                         int position, long id) {
@@ -504,23 +508,24 @@ public abstract class ActivityBase extends AppCompatActivity {
         if (VDBG) Log.d(TAG, "handleServerResponse Success=" + isDataRetrievalSuccess);
         mIsInfoUnavailable = !isDataRetrievalSuccess;
         if (isDataRetrievalSuccess) {
+            updateListViewTitle();
             updateAvailableButtons(false);
+            updatePageCounters();
         } else {
             Log.e(TAG, "unable to retrieve the info");
             handleServerErrorResponse(new VolleyError());
-            updateAvailableButtons(true);
         }
-        updatePageCounters();
     }
 
     private void handleServerErrorResponse(VolleyError error) {
         if (VDBG) Log.d(TAG, "handleServerErrorResponse");
         mIsInfoUnavailable = true;
+        mTotalNumberOfItemsInServer = null;
         setErrorMessage(error);
+        updateListViewTitle();
         updateAvailableButtons(true);
         updatePageCounters();
     }
-
 
     protected void addUrlParam(StringBuilder url, String param, String value) {
         if (VDBG) Log.d(TAG, "addUrlParam");
@@ -600,6 +605,50 @@ public abstract class ActivityBase extends AppCompatActivity {
         } else {
             if (VDBG) Log.d(TAG, "Imaged N/A");
         }
+    }
+
+    /* Updating the Title on top of the List (e.g. 200 Authors Available or 1 Author Available) */
+    private void updateListViewTitle() {
+        if (VDBG) Log.d(TAG, "updateListViewTitle");
+        boolean isOnlyOneItem = false;
+        String titlePrefix = "";
+        /* Retrieving the Total Number of items */
+        if (mTotalNumberOfItemsInServer != null) {
+            titlePrefix = mTotalNumberOfItemsInServer;
+            isOnlyOneItem = Integer.parseInt(mTotalNumberOfItemsInServer) == 1;
+        } else {
+            titlePrefix = getString(R.string.no);
+        }
+        /*
+        Retrieving the type of item to display (author, post, comment...)
+        We need to handle the case when we have 0 items (e.g. "No Author" instead of "N Authors"
+        */
+        String itemType = "";
+        if (this instanceof MainActivity) {
+            if (isOnlyOneItem) {
+                itemType = getString(R.string.author);
+            } else {
+                itemType = getString(R.string.authors);
+            }
+        } else if (this instanceof PostsActivity) {
+            if (isOnlyOneItem) {
+                itemType = getString(R.string.post);
+            } else {
+                itemType = getString(R.string.posts);
+            }
+        } else if (this instanceof CommentsActivity) {
+            if (isOnlyOneItem) {
+                itemType = getString(R.string.comment);
+            } else {
+                itemType = getString(R.string.comments);
+            }
+        } else {
+            Log.e(TAG, "Unexpected Class Type");
+        }
+        String titleToDisplay = titlePrefix.concat(" ").concat(itemType).concat(" ").concat(
+                getString(R.string.available));
+        if (VDBG) Log.d(TAG, "Title to Display=" + titleToDisplay);
+        mItemsListTitleTextView.setText(titleToDisplay);
     }
 
     /* Fill the ListView with a simple row (just a TextView), following the simple_row.xml layout */
@@ -693,23 +742,21 @@ public abstract class ActivityBase extends AppCompatActivity {
     }
 
     protected void exitApplication() {
-        if (VDBG) Log.d(TAG, "exitApplication");
-        Class<?> currentClass = getClass();
-        if (VDBG) Log.d(TAG, "currentClass=" + currentClass);
-        if (currentClass != MAIN_ACTIVITY) {
+        if (VDBG) Log.d(TAG, "exitApplication Current Class=" + this.getClass().getName());
+        if (this instanceof MainActivity) {
+            finish();
+        } else {
             /*
             Only the MainActivity can close the application using the finish() method.
             Sending an intent to the MainActivity to call its finish() method
             */
-            if (VDBG) Log.d(TAG, "Sending intent to " + MAIN_ACTIVITY);
+            if (VDBG) Log.d(TAG, "Sending intent to " + MainActivity.class);
             Intent intent = new Intent(getApplicationContext(), MainActivity.class);
             intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             intent.putExtra(EXTRA_EXIT, true);
             startActivity(intent);
-        } else {
-            finish();
         }
     }
 

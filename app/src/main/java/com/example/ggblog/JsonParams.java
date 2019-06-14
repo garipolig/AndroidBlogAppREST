@@ -7,6 +7,7 @@ public final class JsonParams {
     public static final String RESPONSE_HEADER_LINK = "Link";
     public static final String RESPONSE_HEADER_DATE = "Date";
     public static final String RESPONSE_HEADER_LAST_MODIFIED = "Last-Modified";
+    public static final String RESPONSE_TOTAL_COUNT = "X-Total-Count";
     public static final String RESPONSE_HEADER_REL_FIRST_PAGE = "first";
     public static final String RESPONSE_HEADER_REL_PREV_PAGE = "prev";
     public static final String RESPONSE_HEADER_REL_NEXT_PAGE = "next";

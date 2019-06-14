@@ -40,8 +40,6 @@ public class PostsActivity extends ActivityBase {
 
     private Author mCurrentAuthor;
 
-    private static final Class<?> NEXT_ACTIVITY = CommentsActivity.class;
-
     /*
     SharedPreferences impacting this Activity
     */
@@ -148,11 +146,6 @@ public class PostsActivity extends ActivityBase {
         return R.layout.activity_posts;
     }
 
-    protected String getListTitle() {
-        if (VDBG) Log.d(TAG, "getListTitle");
-        return getString(R.string.posts_list);
-    }
-
     protected void onItemClicked(int position) {
         if (VDBG) Log.d(TAG, "onItemClicked position=" + position);
         Post post = getItemAtPosition(position);
@@ -163,7 +156,7 @@ public class PostsActivity extends ActivityBase {
             since we are switching to a new page (from Posts List to Comments List).
             */
             NetworkRequestUtils.getInstance(getApplicationContext()).cancelAllRequests(REQUEST_TAG);
-            Intent intent = new Intent(getApplicationContext(), NEXT_ACTIVITY);
+            Intent intent = new Intent(getApplicationContext(), CommentsActivity.class);
             if (VDBG) Log.d(TAG, "Post to send: " + post);
             intent.putExtra(EXTRA_MESSAGE, post);
             startActivity(intent);

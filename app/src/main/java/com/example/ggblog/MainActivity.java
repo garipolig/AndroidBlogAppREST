@@ -31,8 +31,6 @@ public class MainActivity extends ActivityBase {
     /* To identify the Server requests made by this Activity, to cancel them if needed */
     private static final String REQUEST_TAG = "AUTHORS_LIST_REQUEST";
 
-    private static final Class<?> NEXT_ACTIVITY = PostsActivity.class;
-
     /*
     SharedPreferences impacting this Activity
     */
@@ -110,11 +108,6 @@ public class MainActivity extends ActivityBase {
         return R.layout.activity_main;
     }
 
-    protected String getListTitle() {
-        if (VDBG) Log.d(TAG, "getListTitle");
-        return getString(R.string.authors_list);
-    }
-
     protected void onItemClicked(int position) {
         if (VDBG) Log.d(TAG, "onItemClicked position=" + position);
         Author author = getItemAtPosition(position);
@@ -125,7 +118,7 @@ public class MainActivity extends ActivityBase {
             since we are switching to a new page (from Authors List to Posts List).
             */
             NetworkRequestUtils.getInstance(getApplicationContext()).cancelAllRequests(REQUEST_TAG);
-            Intent intent = new Intent(getApplicationContext(), NEXT_ACTIVITY);
+            Intent intent = new Intent(getApplicationContext(), PostsActivity.class);
             if (VDBG) Log.d(TAG, "Author to send: " + author);
             intent.putExtra(EXTRA_MESSAGE, author);
             startActivity(intent);

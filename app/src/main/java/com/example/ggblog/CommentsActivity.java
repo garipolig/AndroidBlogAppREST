@@ -167,11 +167,6 @@ public class CommentsActivity extends ActivityBase {
         return R.layout.activity_comments;
     }
 
-    protected String getListTitle() {
-        if (VDBG) Log.d(TAG, "getListTitle");
-        return getString(R.string.comments_list);
-    }
-
     /*
     Implementing this method because it's abstract in base class.
     But it will be never called, since the comments are not clickable.
