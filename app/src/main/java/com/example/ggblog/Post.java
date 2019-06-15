@@ -134,15 +134,19 @@ public class Post implements Parcelable {
         return mAuthor;
     }
 
+    /* All the information of the Post are mandatory except the ImageUrl*/
+    public boolean isValid() {
+        return (mId != null && mDate != null && mTitle != null && mBody != null &&
+                mAuthor != null && mAuthor.isValid());
+    }
+
     @Override
     public String toString() {
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("Id=").append(mId).append(" - ");
-        stringBuilder.append("Date=").append(mDate).append(" - ");
-        stringBuilder.append("Title=").append(mTitle).append(" - ");
-        stringBuilder.append("Body=").append(mBody).append(" - ");
-        stringBuilder.append("Image URL=").append(mImageUrl).append(" - ");
-        stringBuilder.append("Author=").append(mAuthor);
-        return stringBuilder.toString();
+        return  "Id=" + mId + " - " +
+                "Date=" + mDate + " - " +
+                "Title=" + mTitle + " - " +
+                "Body=" + mBody + " - " +
+                "Image URL=" + mImageUrl + " - " +
+                "Author=" + mAuthor;
     }
 }

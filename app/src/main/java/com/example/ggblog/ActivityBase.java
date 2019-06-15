@@ -167,7 +167,7 @@ public abstract class ActivityBase extends AppCompatActivity {
                 final String jsonStringData = new String(response.data,
                         HttpHeaderParser.parseCharset(response.headers, PROTOCOL_CHARSET));
                 computePageUrlRequests(response);
-                /* -1 means value not initialized */
+                /* -1 means value not initialized (we fail to get it from SharedPreferences) */
                 if (mCacheHitTimePref != -1 && mCacheExpirationTimePref != -1) {
                     Cache.Entry cacheEntry = configureCustomCacheFromResponse(response);
                     return Response.success(new JSONArray(
@@ -527,22 +527,6 @@ public abstract class ActivityBase extends AppCompatActivity {
         updatePageCounters();
     }
 
-    protected void addUrlParam(StringBuilder url, String param, String value) {
-        if (VDBG) Log.d(TAG, "addUrlParam");
-        if (url != null && !url.toString().isEmpty()) {
-            if (VDBG) Log.d(TAG, "param=" + param + ", value=" + value);
-            if (param != null && !param.isEmpty() &&
-                    value != null && !value.isEmpty()) {
-                url.append("&").append(param).append("=").append(value);
-                if (DBG) Log.d(TAG, "New URL is " + url);
-            } else {
-                Log.e(TAG, "Invalid param/value");
-            }
-        } else {
-            Log.e(TAG, "URL null or empty");
-        }
-    }
-
     /* To change the date format coming from the Web Server to the specific format for our UI */
     protected String formatDate(String date) {
         if (VDBG) Log.d(TAG, "formatDate");
@@ -611,7 +595,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     private void updateListViewTitle() {
         if (VDBG) Log.d(TAG, "updateListViewTitle");
         boolean isOnlyOneItem = false;
-        String titlePrefix = "";
+        String titlePrefix;
         /* Retrieving the Total Number of items */
         if (mTotalNumberOfItemsInServer != null) {
             titlePrefix = mTotalNumberOfItemsInServer;
@@ -836,21 +820,24 @@ public abstract class ActivityBase extends AppCompatActivity {
             if (VDBG) Log.d(TAG, "retrieveSetting key=" + key);
             switch (key) {
                 case SettingsActivity.PREF_WEB_SERVER_URL_KEY:
+                    /* TODO: validate the input from user. Prevent invalid values */
                     mWebServerUrlPref = mSharedPreferences.getString(
                             SettingsActivity.PREF_WEB_SERVER_URL_KEY,
                             SettingsActivity.PREF_WEB_SERVER_URL_DEFAULT);
-                    if (DBG) Log.d(TAG, "Web Server URL=" + mWebServerUrlPref);
-                    /* Understanding if the connection is HTTP or HTTPS */
-                    if (mWebServerUrlPref.startsWith(UrlParams.HTTP_HEADER)) {
-                        if (DBG) Log.d(TAG, "Connection type is HTTP");
-                        mIsHttpsConnection = false;
-                    } else if (mWebServerUrlPref.startsWith(UrlParams.HTTPS_HEADER)) {
-                        if (DBG) Log.d(TAG, "Connection type is HTTPS");
-                        mIsHttpsConnection = true;
-                    } else {
-                        /* TODO: preventing the user to provide malformed address in the UI */
-                        Log.e(TAG, "Invalid Web Server URL " + mWebServerUrlPref);
+                    if (mWebServerUrlPref != null) {
+                        /* Understanding if the connection is HTTP or HTTPS */
+                        if (mWebServerUrlPref.startsWith(UrlParams.HTTP_HEADER)) {
+                            if (DBG) Log.d(TAG, "Connection type is HTTP");
+                            mIsHttpsConnection = false;
+                        } else if (mWebServerUrlPref.startsWith(UrlParams.HTTPS_HEADER)) {
+                            if (DBG) Log.d(TAG, "Connection type is HTTPS");
+                            mIsHttpsConnection = true;
+                        } else {
+                            Log.e(TAG, "Invalid Web Server URL " + mWebServerUrlPref);
+                        }
                     }
+                    if (DBG) Log.d(TAG, "Web Server URL=" + mWebServerUrlPref + "," +
+                            "HTTPS=" + mIsHttpsConnection);
                     break;
                 case SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_KEY:
                     mIsAutoRetryWhenOnlineEnabledPref = mSharedPreferences.getBoolean(
@@ -860,15 +847,22 @@ public abstract class ActivityBase extends AppCompatActivity {
                             mIsAutoRetryWhenOnlineEnabledPref);
                     break;
                 case SettingsActivity.PREF_CACHE_HIT_TIME_KEY:
-                    mCacheHitTimePref = Long.parseLong(mSharedPreferences.getString(
-                            SettingsActivity.PREF_CACHE_HIT_TIME_KEY,
-                            SettingsActivity.PREF_CACHE_HIT_TIME_DEFAULT));
+                    String cacheHitTimeString = mSharedPreferences.getString(
+                        SettingsActivity.PREF_CACHE_HIT_TIME_KEY,
+                        SettingsActivity.PREF_CACHE_HIT_TIME_DEFAULT);
+                    if (cacheHitTimeString != null) {
+                        mCacheHitTimePref = Long.parseLong(cacheHitTimeString);
+                        if (DBG) Log.d(TAG, "Cache Hit Time=" + mCacheHitTimePref);
+                    }
                     if (DBG) Log.d(TAG, "Cache Hit Time=" + mCacheHitTimePref);
                     break;
                 case SettingsActivity.PREF_CACHE_EXPIRATION_TIME_KEY:
-                    mCacheExpirationTimePref = Long.parseLong(mSharedPreferences.getString(
+                    String cacheExpirationTimeString = mSharedPreferences.getString(
                             SettingsActivity.PREF_CACHE_EXPIRATION_TIME_KEY,
-                            SettingsActivity.PREF_CACHE_EXPIRATION_TIME_DEFAULT));
+                            SettingsActivity.PREF_CACHE_EXPIRATION_TIME_DEFAULT);
+                    if (cacheExpirationTimeString != null) {
+                        mCacheExpirationTimePref = Long.parseLong(cacheExpirationTimeString);
+                    }
                     if (DBG) Log.d(TAG, "Cache Expiration Time=" + mCacheExpirationTimePref);
                     break;
                 default:

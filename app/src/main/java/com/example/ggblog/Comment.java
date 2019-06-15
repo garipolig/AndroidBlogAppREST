@@ -150,16 +150,20 @@ public class Comment implements Parcelable {
         return mPost;
     }
 
+    /* All the information of the Comment are mandatory except the AvatarUrl */
+    public boolean isValid() {
+        return (mId != null && mDate != null && mBody != null && mUserName != null &&
+                mEmail != null && mPost != null && mPost.isValid());
+    }
+
     @Override
     public String toString() {
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("Id=").append(mId).append(" - ");
-        stringBuilder.append("Date=").append(mDate).append(" - ");
-        stringBuilder.append("Body=").append(mBody).append(" - ");
-        stringBuilder.append("UserName=").append(mUserName).append(" - ");
-        stringBuilder.append("Email=").append(mUserName).append(" - ");
-        stringBuilder.append("Avatar URL=").append(mAvatarUrl).append(" - ");
-        stringBuilder.append("Post=").append(mPost);
-        return stringBuilder.toString();
+        return  "Id=" + mId + " - " +
+                "Date=" + mDate + " - " +
+                "Body=" + mBody + " - " +
+                "UserName=" + mUserName + " - " +
+                "Email=" + mUserName + " - " +
+                "Avatar URL=" + mAvatarUrl + " - " +
+                "Post=" + mPost;
     }
 }

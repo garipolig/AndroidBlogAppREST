@@ -202,13 +202,13 @@ public class CommentsActivity extends ActivityBase {
                     JSONObject jsonObject = jsonArray.getJSONObject(i);
                     if (jsonObject != null) {
                         Comment comment = new Comment(jsonObject);
-                        if (comment != null) {
+                        /* Adding the post to the comment (it's one of the condition to be valid) */
+                        comment.setPost(mCurrentPost);
+                        if (comment.isValid()) {
                             if (VDBG) Log.d(TAG, "Current Comment " + comment);
-                            /* Adding the author */
-                            comment.setPost(mCurrentPost);
                             itemsList.add(comment);
                         } else {
-                            Log.e(TAG, "Unable to retrieve the current Comment info");
+                            Log.e(TAG, "The Comment is not valid -> discarded");
                         }
                     } else {
                         Log.e(TAG, "jsonObject is NULL");
@@ -270,12 +270,14 @@ public class CommentsActivity extends ActivityBase {
             if (VDBG) Log.d(TAG, "retrieveSetting key=" + key);
             switch (key) {
                 case SettingsActivity.PREF_COMMENTS_SUB_PAGE_KEY:
+                    /* TODO: validate the input from user. Prevent invalid values */
                     mSubPagePref = mSharedPreferences.getString(
                             SettingsActivity.PREF_COMMENTS_SUB_PAGE_KEY,
                             SettingsActivity.PREF_COMMENTS_SUB_PAGE_DEFAULT);
                     if (DBG) Log.d(TAG, "SubPage=" + mSubPagePref);
                     break;
                 case SettingsActivity.PREF_MAX_NUM_COMMENTS_PER_PAGE_KEY:
+                    /* TODO: validate the input from user. Prevent invalid values */
                     mMaxNumItemsPerPagePref = mSharedPreferences.getString(
                             SettingsActivity.PREF_MAX_NUM_COMMENTS_PER_PAGE_KEY,
                             SettingsActivity.PREF_MAX_NUM_COMMENTS_PER_PAGE_DEFAULT);
@@ -308,43 +310,37 @@ public class CommentsActivity extends ActivityBase {
         super.handleServerResponse(isDataRetrievalSuccess);
     }
 
-    private void retrieveInitialDataFromServer(Post post) {
-        if (VDBG) Log.d(TAG, "retrieveInitialDataFromServer Post=" + post);
-        if (post != null) {
-            String requestUrl = computeFirstRequestUrl(post);
-            if (requestUrl != null && !requestUrl.isEmpty()) {
-                retrieveItemsList(requestUrl);
-            } else {
-                Log.e(TAG, "invalid request URL");
-            }
-        } else {
-            Log.e(TAG, "Post is NULL");
-        }
-    }
-
     /*
     Retrieving the first page of comments (we are using pagination)
     Starting from this moment, the buttons firstPage, PrevPage, NextPage and LastPage will be
     automatically populated with the correct URL Request, thanks to the Link section present in
     the Response header
     */
-    private String computeFirstRequestUrl(Post post) {
-        if (VDBG) Log.d(TAG, "computeFirstRequestUrl Post=" + post);
-        String requestUrl = null;
-        if (post != null && post.getId() != null && !post.getId().isEmpty()) {
-            String url = mWebServerUrlPref + "/" + mSubPagePref + "?" +
-                    UrlParams.GET_PAGE_NUM + "=1";
-            if (DBG) Log.d(TAG, "Initial URL is " + url);
-            StringBuilder requestUrlSb = new StringBuilder(url);
-            addUrlParam(requestUrlSb, UrlParams.POST_ID, post.getId());
-            addUrlParam(requestUrlSb, UrlParams.LIMIT_NUM_RESULTS, mMaxNumItemsPerPagePref);
-            /* mItemsOrderingMethodPref is already in the good format. No need to use addUrlParam */
-            requestUrlSb.append(mItemsOrderingMethodPref);
-            requestUrl = requestUrlSb.toString();
+    private void retrieveInitialDataFromServer(Post post) {
+        if (VDBG) Log.d(TAG, "retrieveInitialDataFromServer Post=" + post);
+        if (post != null && post.isValid()) {
+            if (mWebServerUrlPref != null && mSubPagePref != null) {
+                String url = mWebServerUrlPref + "/" + mSubPagePref + "?" +
+                        UrlParams.GET_PAGE_NUM + "=1";
+                if (DBG) Log.d(TAG, "Initial URL is " + url);
+                StringBuilder requestUrlSb = new StringBuilder(url);
+                UrlParams.addUrlParam(requestUrlSb, UrlParams.POST_ID, post.getId());
+                UrlParams.addUrlParam(requestUrlSb, UrlParams.LIMIT_NUM_RESULTS,
+                        mMaxNumItemsPerPagePref);
+
+                /* Add here any additional parameter you may want to add to the initial request */
+
+                /* mItemsOrderingMethodPref already in good format. No need to use addUrlParam */
+                requestUrlSb.append(mItemsOrderingMethodPref);
+                retrieveItemsList(requestUrlSb.toString());
+            } else {
+                /* This occurs when we failed to get those values from SharedPreferences */
+                Log.e(TAG, "Invalid URL. Web Server=" + mWebServerUrlPref +
+                        ", Sub Page=" + mSubPagePref);
+            }
         } else {
-            Log.e(TAG, "post is null or  its id is NULL or empty");
+            Log.e(TAG, "post is NULL or not valid");
         }
-        return requestUrl;
     }
 
     private void updateCustomListView(ArrayList<Comment> commentsList) {

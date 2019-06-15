@@ -110,21 +110,14 @@ public class MainActivity extends ActivityBase {
 
     protected void onItemClicked(int position) {
         if (VDBG) Log.d(TAG, "onItemClicked position=" + position);
+        /* Cancel any ongoing requests made by this Activity, since we are switching to a new one */
+        NetworkRequestUtils.getInstance(getApplicationContext()).cancelAllRequests(REQUEST_TAG);
+        /* Author is surely valid, since we have checked before inserting it to the list  */
         Author author = getItemAtPosition(position);
-        /* Author info must be valid  */
-        if (author != null && author.getId() != null && !author.getId().isEmpty()) {
-            /*
-            Cancel any ongoing requests (e.g. display another page of Authors)
-            since we are switching to a new page (from Authors List to Posts List).
-            */
-            NetworkRequestUtils.getInstance(getApplicationContext()).cancelAllRequests(REQUEST_TAG);
-            Intent intent = new Intent(getApplicationContext(), PostsActivity.class);
-            if (VDBG) Log.d(TAG, "Author to send: " + author);
-            intent.putExtra(EXTRA_MESSAGE, author);
-            startActivity(intent);
-        } else {
-            Log.e(TAG, "author is NULL or not valid: " + author);
-        }
+        Intent intent = new Intent(getApplicationContext(), PostsActivity.class);
+        if (VDBG) Log.d(TAG, "Author to send: " + author);
+        intent.putExtra(EXTRA_MESSAGE, author);
+        startActivity(intent);
     }
 
     private Author getItemAtPosition(int position) {
@@ -149,11 +142,11 @@ public class MainActivity extends ActivityBase {
                     JSONObject jsonObject = jsonArray.getJSONObject(i);
                     if (jsonObject != null) {
                         Author author = new Author(jsonObject);
-                        if (author != null) {
+                        if (author.isValid()) {
                             if (VDBG) Log.d(TAG, "Current Author " + author);
                             itemsList.add(author);
                         } else {
-                            Log.e(TAG, "Unable to retrieve the current Author info");
+                            Log.e(TAG, "The Author is not valid -> discarded");
                         }
                     } else {
                         Log.e(TAG, "jsonObject is NULL");
@@ -215,12 +208,14 @@ public class MainActivity extends ActivityBase {
             if (VDBG) Log.d(TAG, "retrieveSetting key=" + key);
             switch (key) {
                 case SettingsActivity.PREF_AUTHORS_SUB_PAGE_KEY:
+                    /* TODO: validate the input from user. Prevent invalid values */
                     mSubPagePref = mSharedPreferences.getString(
                             SettingsActivity.PREF_AUTHORS_SUB_PAGE_KEY,
                             SettingsActivity.PREF_AUTHORS_SUB_PAGE_DEFAULT);
                     if (DBG) Log.d(TAG, "SubPage=" + mSubPagePref);
                     break;
                 case SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY:
+                    /* TODO: validate the input from user. Prevent invalid values */
                     mMaxNumItemsPerPagePref = mSharedPreferences.getString(
                             SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY,
                             SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_DEFAULT);
@@ -253,32 +248,32 @@ public class MainActivity extends ActivityBase {
         super.handleServerResponse(isDataRetrievalSuccess);
     }
 
-    private void retrieveInitialDataFromServer() {
-        if (VDBG) Log.d(TAG, "retrieveInitialDataFromServer");
-        String requestUrl = computeFirstRequestUrl();
-        if (requestUrl != null && !requestUrl.isEmpty()) {
-            retrieveItemsList(requestUrl);
-        } else {
-            Log.e(TAG, "invalid request URL");
-        }
-    }
-
     /*
     Retrieving the first page of authors (we are using pagination)
     Starting from this moment, the buttons firstPage, PrevPage, NextPage and LastPage will be
     automatically populated with the correct URL Request, thanks to the Link section present in
     the Response header
     */
-    private String computeFirstRequestUrl() {
-        if (VDBG) Log.d(TAG, "computeFirstRequestUrl");
-        String url = mWebServerUrlPref + "/" + mSubPagePref + "?" +
-                UrlParams.GET_PAGE_NUM + "=1";
-        if (DBG) Log.d(TAG, "Initial URL is " + url);
-        StringBuilder requestUrlSb = new StringBuilder(url);
-        addUrlParam(requestUrlSb, UrlParams.LIMIT_NUM_RESULTS, mMaxNumItemsPerPagePref);
-        /* mItemsOrderingMethodPref is already in the good format. No need to use addUrlParam */
-        requestUrlSb.append(mItemsOrderingMethodPref);
-        return requestUrlSb.toString();
+    private void retrieveInitialDataFromServer() {
+        if (VDBG) Log.d(TAG, "retrieveInitialDataFromServer");
+        if (mWebServerUrlPref != null && mSubPagePref != null) {
+            String url = mWebServerUrlPref + "/" + mSubPagePref + "?" +
+                    UrlParams.GET_PAGE_NUM + "=1";
+            if (DBG) Log.d(TAG, "Initial URL is " + url);
+            StringBuilder requestUrlSb = new StringBuilder(url);
+            UrlParams.addUrlParam(requestUrlSb, UrlParams.LIMIT_NUM_RESULTS,
+                    mMaxNumItemsPerPagePref);
+
+            /* Add here any additional parameter you may want to add to the initial request */
+
+            /* mItemsOrderingMethodPref already in good format. No need to use addUrlParam */
+            requestUrlSb.append(mItemsOrderingMethodPref);
+            retrieveItemsList(requestUrlSb.toString());
+        } else {
+            /* This occurs when we failed to get those values from SharedPreferences */
+            Log.e(TAG, "Invalid URL. Web Server=" + mWebServerUrlPref +
+                    ", Sub Page=" + mSubPagePref);
+        }
     }
 
     private void updateCustomListView(ArrayList<Author> authorsList) {

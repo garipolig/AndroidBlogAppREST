@@ -148,21 +148,14 @@ public class PostsActivity extends ActivityBase {
 
     protected void onItemClicked(int position) {
         if (VDBG) Log.d(TAG, "onItemClicked position=" + position);
+        /* Cancel any ongoing requests made by this Activity, since we are switching to a new one */
+        NetworkRequestUtils.getInstance(getApplicationContext()).cancelAllRequests(REQUEST_TAG);
+        /* Post is surely valid, since we have checked before inserting it to the list  */
         Post post = getItemAtPosition(position);
-        /* Post info must be valid  */
-        if (post != null && post.getId() != null && !post.getId().isEmpty()) {
-            /*
-            Cancel any ongoing requests (e.g. display another page of Posts)
-            since we are switching to a new page (from Posts List to Comments List).
-            */
-            NetworkRequestUtils.getInstance(getApplicationContext()).cancelAllRequests(REQUEST_TAG);
-            Intent intent = new Intent(getApplicationContext(), CommentsActivity.class);
-            if (VDBG) Log.d(TAG, "Post to send: " + post);
-            intent.putExtra(EXTRA_MESSAGE, post);
-            startActivity(intent);
-        } else {
-            Log.e(TAG, "post is NULL or not valid: " + post);
-        }
+        Intent intent = new Intent(getApplicationContext(), CommentsActivity.class);
+        if (VDBG) Log.d(TAG, "Post to send: " + post);
+        intent.putExtra(EXTRA_MESSAGE, post);
+        startActivity(intent);
     }
 
     private Post getItemAtPosition(int position) {
@@ -187,13 +180,13 @@ public class PostsActivity extends ActivityBase {
                     JSONObject jsonObject = jsonArray.getJSONObject(i);
                     if (jsonObject != null) {
                         Post post = new Post(jsonObject);
-                        if (post != null) {
+                        /* Adding the author to the post (it's one of the condition to be valid) */
+                        post.setAuthor(mCurrentAuthor);
+                        if (post.isValid()) {
                             if (VDBG) Log.d(TAG, "Current Post " + post);
-                            /* Adding the author */
-                            post.setAuthor(mCurrentAuthor);
                             itemsList.add(post);
                         } else {
-                            Log.e(TAG, "Unable to retrieve the current Post info");
+                            Log.e(TAG, "The Post is not valid -> discarded");
                         }
                     } else {
                         Log.e(TAG, "jsonObject is NULL");
@@ -255,12 +248,14 @@ public class PostsActivity extends ActivityBase {
             if (VDBG) Log.d(TAG, "retrieveSetting key=" + key);
             switch (key) {
                 case SettingsActivity.PREF_POSTS_SUB_PAGE_KEY:
+                    /* TODO: validate the input from user. Prevent invalid values */
                     mSubPagePref = mSharedPreferences.getString(
                             SettingsActivity.PREF_POSTS_SUB_PAGE_KEY,
                             SettingsActivity.PREF_POSTS_SUB_PAGE_DEFAULT);
                     if (DBG) Log.d(TAG, "SubPage=" + mSubPagePref);
                     break;
                 case SettingsActivity.PREF_MAX_NUM_POSTS_PER_PAGE_KEY:
+                    /* TODO: validate the input from user. Prevent invalid values */
                     mMaxNumItemsPerPagePref = mSharedPreferences.getString(
                             SettingsActivity.PREF_MAX_NUM_POSTS_PER_PAGE_KEY,
                             SettingsActivity.PREF_MAX_NUM_POSTS_PER_PAGE_DEFAULT);
@@ -293,43 +288,37 @@ public class PostsActivity extends ActivityBase {
         super.handleServerResponse(isDataRetrievalSuccess);
     }
 
-    private void retrieveInitialDataFromServer(Author author) {
-        if (VDBG) Log.d(TAG, "retrieveInitialDataFromServer Author=" + author);
-        if (author != null) {
-            String requestUrl = computeFirstRequestUrl(author);
-            if (requestUrl != null && !requestUrl.isEmpty()) {
-                retrieveItemsList(requestUrl);
-            } else {
-                Log.e(TAG, "Unable to retrieve the request URL");
-            }
-        } else {
-            Log.e(TAG, "Author is NULL");
-        }
-    }
-
     /*
     Retrieving the first page of posts (we are using pagination)
     Starting from this moment, the buttons firstPage, PrevPage, NextPage and LastPage will be
     automatically populated with the correct URL Request, thanks to the Link section present in
     the Response header
     */
-    private String computeFirstRequestUrl(Author author) {
-        if (VDBG) Log.d(TAG, "computeFirstRequestUrl Author=" + author);
-        String requestUrl = null;
-        if (author != null && author.getId() != null && !author.getId().isEmpty()) {
-            String url = mWebServerUrlPref + "/" + mSubPagePref + "?" +
-                    UrlParams.GET_PAGE_NUM + "=1";
-            if (DBG) Log.d(TAG, "Initial URL is " + url);
-            StringBuilder requestUrlSb = new StringBuilder(url);
-            addUrlParam(requestUrlSb, UrlParams.AUTHOR_ID, author.getId());
-            addUrlParam(requestUrlSb, UrlParams.LIMIT_NUM_RESULTS, mMaxNumItemsPerPagePref);
-            /* mItemsOrderingMethodPref is already in the good format. No need to use addUrlParam */
-            requestUrlSb.append(mItemsOrderingMethodPref);
-            requestUrl = requestUrlSb.toString();
+    private void retrieveInitialDataFromServer(Author author) {
+        if (VDBG) Log.d(TAG, "retrieveInitialDataFromServer Author=" + author);
+        if (author != null && author.isValid()) {
+            if (mWebServerUrlPref != null && mSubPagePref != null) {
+                String url = mWebServerUrlPref + "/" + mSubPagePref + "?" +
+                        UrlParams.GET_PAGE_NUM + "=1";
+                if (DBG) Log.d(TAG, "Initial URL is " + url);
+                StringBuilder requestUrlSb = new StringBuilder(url);
+                UrlParams.addUrlParam(requestUrlSb, UrlParams.AUTHOR_ID, author.getId());
+                UrlParams.addUrlParam(requestUrlSb, UrlParams.LIMIT_NUM_RESULTS,
+                        mMaxNumItemsPerPagePref);
+
+                /* Add here any additional parameter you may want to add to the initial request */
+
+                /* mItemsOrderingMethodPref already in good format. No need to use addUrlParam */
+                requestUrlSb.append(mItemsOrderingMethodPref);
+                retrieveItemsList(requestUrlSb.toString());
+            } else {
+                /* This occurs when we failed to get those values from SharedPreferences */
+                Log.e(TAG, "Invalid URL. Web Server=" + mWebServerUrlPref +
+                        ", Sub Page=" + mSubPagePref);
+            }
         } else {
-            Log.e(TAG, "author is NULL or its id is NULL or empty");
+            Log.e(TAG, "author is NULL or not Valid");
         }
-        return requestUrl;
     }
 
     private void updateCustomListView(ArrayList<Post> postsList) {

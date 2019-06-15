@@ -165,18 +165,19 @@ public class Author implements Parcelable {
         return mAddressCoordinates[LONGITUDE_ARRAY_INDEX];
     }
 
+    /* All the information of the Author are mandatory except the AvatarUrl and the Address */
+    public boolean isValid() {
+        return (mId != null && mName != null && mUserName != null && mEmail != null);
+    }
+
     @Override
     public String toString() {
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("Id=").append(mId).append(" - ");
-        stringBuilder.append("Name=").append(mName).append(" - ");
-        stringBuilder.append("User Name=").append(mUserName).append(" - ");
-        stringBuilder.append("Email=").append(mEmail).append(" - ");
-        stringBuilder.append("Avatar URL=").append(mAvatarUrl).append(" - ");
-        stringBuilder.append("Address Latitude=").append(
-                mAddressCoordinates[LATITUDE_ARRAY_INDEX]).append(" - ");
-        stringBuilder.append("Address Longitude=").append(
-                mAddressCoordinates[LONGITUDE_ARRAY_INDEX]);
-        return stringBuilder.toString();
+        return  "Id=" + mId + " - " +
+                "Name=" + mName + " - " +
+                "User Name=" + mUserName + " - " +
+                "Email=" + mEmail + " - " +
+                "Avatar URL=" + mAvatarUrl + " - " +
+                "Address Latitude=" + mAddressCoordinates[LATITUDE_ARRAY_INDEX] + " - " +
+                "Address Longitude=" + mAddressCoordinates[LONGITUDE_ARRAY_INDEX];
     }
 }
