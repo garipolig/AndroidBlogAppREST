@@ -15,31 +15,19 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+/* Entry point of the Application: handles the list of Authors */
 public class MainActivity extends ActivityBase {
 
     private static final String TAG = "MainActivity";
 
     /* To identify the Server requests made by this Activity, to cancel them if needed */
     private static final String REQUEST_TAG = "AUTHORS_LIST_REQUEST";
-
-    /*
-    SharedPreferences impacting this Activity
-    */
-    private static final Set<String> PREFERENCES_KEYS =
-            new HashSet<>(Arrays.asList(
-                    SettingsActivity.PREF_AUTHORS_SUB_PAGE_KEY,
-                    SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY,
-                    SettingsActivity.PREF_AUTHORS_ORDERING_METHOD_KEY
-            ));
 
     /*
     Needed to fill the table (ListView) of Authors, using the specific row layout for the Author
@@ -133,7 +121,7 @@ public class MainActivity extends ActivityBase {
     }
 
     /* Information to be displayed on the Table (Authors List) */
-    private ArrayList<Author> getInfoToDisplayOnTable(JSONArray jsonArray) {
+    protected ArrayList<Author> getInfoToDisplayOnTable(JSONArray jsonArray) {
         if (VDBG) Log.d(TAG, "getInfoToDisplayOnTable");
         ArrayList<Author> itemsList = new ArrayList<>();
         if (jsonArray != null && jsonArray.length() > 0) {
@@ -161,113 +149,22 @@ public class MainActivity extends ActivityBase {
         return itemsList;
     }
 
-    protected String getRequestTag() {
-        if (VDBG) Log.d(TAG, "getRequestTag");
-        return REQUEST_TAG;
+    /* A new URL Request will be used starting from now -> Asking initial data to server */
+    protected void handleSubPageChanged() {
+        if (VDBG) Log.d(TAG, "handleSubPageChanged");
+        retrieveInitialDataFromServer();
     }
 
-    @Override
-    protected void handleSettingChange(String key) {
-        if (PREFERENCES_KEYS.contains(key)) {
-            if (VDBG) Log.d(TAG, "handleSettingChange key=" + key);
-            /* Retrieving the new value */
-            boolean isValueChanged = retrieveSetting(key);
-            if (isValueChanged) {
-                if (DBG) Log.d(TAG, "KEY_CHANGED=" + key);
-                /* Perform a special action depending on the setting that has changed */
-                switch (key) {
-                    case SettingsActivity.PREF_AUTHORS_SUB_PAGE_KEY:
-                    case SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY:
-                    case SettingsActivity.PREF_AUTHORS_ORDERING_METHOD_KEY:
-                        /*
-                        Re-creating again the list of Authors with the new pagination, as if we were
-                        starting again this Activity.
-                        */
-                        retrieveInitialDataFromServer();
-                        break;
-                    default:
-                        break;
-                }
-            } else {
-                if (VDBG) Log.d(TAG, "KEY_NOT_CHANGED=" + key + " -> Nothing to do");
-            }
-        } else {
-            super.handleSettingChange(key);
-        }
+    /* A new URL Request will be used starting from now -> Asking initial data to server */
+    protected void handleMaxNumItemsPerPageChanged() {
+        if (VDBG) Log.d(TAG, "handleMaxNumItemsPerPageChanged");
+        retrieveInitialDataFromServer();
     }
 
-    @Override
-    protected void retrieveSettings() {
-        if (VDBG) Log.d(TAG, "retrieveSettings for " + PREFERENCES_KEYS);
-        /* Retrieving the preferences only handled by this Activity */
-        for (String key : PREFERENCES_KEYS) {
-            retrieveSetting(key);
-        }
-        /* Asking the superclass to retrieve the rest */
-        super.retrieveSettings();
-    }
-
-    @Override
-    /*
-    All the user inputs are validated -> once we succeed on retrieving the sharedPreference
-    (value != null), its value is surely valid
-    */
-    protected boolean retrieveSetting(String key) {
-        boolean isValueChanged = false;
-        if (PREFERENCES_KEYS.contains(key)) {
-            if (VDBG) Log.d(TAG, "retrieveSetting key=" + key);
-            switch (key) {
-                case SettingsActivity.PREF_AUTHORS_SUB_PAGE_KEY:
-                    String subPage = mSharedPreferences.getString(
-                            SettingsActivity.PREF_AUTHORS_SUB_PAGE_KEY,
-                            SettingsActivity.PREF_AUTHORS_SUB_PAGE_DEFAULT);
-                    if (subPage != null) {
-                        if (!subPage.equals(mSubPagePref)) {
-                            mSubPagePref = subPage;
-                            isValueChanged = true;
-                            if (DBG) Log.d(TAG, "Authors SubPage=" + mSubPagePref);
-                        }
-                    } else {
-                        Log.e(TAG, "Unable to retrieve the Authors SubPage");
-                    }
-                    break;
-                case SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY:
-                    String maxNumItemsPerPage = mSharedPreferences.getString(
-                            SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY,
-                            SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_DEFAULT);
-                    if (maxNumItemsPerPage != null) {
-                        if (!maxNumItemsPerPage.equals(mMaxNumItemsPerPagePref)) {
-                            mMaxNumItemsPerPagePref = maxNumItemsPerPage;
-                            isValueChanged = true;
-                            if (DBG) Log.d(TAG, "Max Num Authors/Page=" +
-                                    mMaxNumItemsPerPagePref);
-                        }
-                    } else {
-                        Log.e(TAG, "Unable to retrieve the Max Num Authors/Page");
-                    }
-                    break;
-                case SettingsActivity.PREF_AUTHORS_ORDERING_METHOD_KEY:
-                    String mItemsOrderingMethod = mSharedPreferences.getString(
-                            SettingsActivity.PREF_AUTHORS_ORDERING_METHOD_KEY,
-                            SettingsActivity.PREF_AUTHORS_ORDERING_METHOD_DEFAULT);
-                    if (mItemsOrderingMethod != null) {
-                        if (!mItemsOrderingMethod.equals(mItemsOrderingMethodPref)) {
-                            mItemsOrderingMethodPref = mItemsOrderingMethod;
-                            isValueChanged = true;
-                            if (DBG) Log.d(TAG, "Authors Ordering Method=" +
-                                    mItemsOrderingMethodPref);
-                        }
-                    } else {
-                        Log.e(TAG, "Unable to retrieve the Authors Ordering Method");
-                    }
-                    break;
-                default:
-                    break;
-            }
-        } else {
-            return super.retrieveSetting(key);
-        }
-        return isValueChanged;
+    /* A new URL Request will be used starting from now -> Asking initial data to server */
+    protected void handleOrderingMethodChanged() {
+        if (VDBG) Log.d(TAG, "handleOrderingMethodChanged");
+        retrieveInitialDataFromServer();
     }
 
     protected void handleServerResponse(JSONArray response) {
@@ -316,5 +213,33 @@ public class MainActivity extends ActivityBase {
         ArrayAdapter<Author> listAdapter =
                 new CustomAdapter(getApplicationContext(), R.layout.author_row, authorsList);
         mItemsListContentListView.setAdapter(listAdapter);
+    }
+
+    protected String getRequestTag() {
+        return REQUEST_TAG;
+    }
+
+    protected String getSubPagePrefKey() {
+        return SettingsActivity.PREF_AUTHORS_SUB_PAGE_KEY;
+    }
+
+    protected String getSubPagePrefDefault() {
+        return SettingsActivity.PREF_AUTHORS_SUB_PAGE_DEFAULT;
+    }
+
+    protected String getMaxNumPerPagePrefKey() {
+        return SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY;
+    }
+
+    protected String getMaxNumPerPagePrefDefault() {
+        return SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_DEFAULT;
+    }
+
+    protected String getOrderingMethodPrefKey() {
+        return SettingsActivity.PREF_AUTHORS_ORDERING_METHOD_KEY;
+    }
+
+    protected String getOrderingMethodPrefDefault() {
+        return SettingsActivity.PREF_AUTHORS_ORDERING_METHOD_DEFAULT;
     }
 }

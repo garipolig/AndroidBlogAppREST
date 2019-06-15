@@ -7,8 +7,9 @@
     <ImageView
         android:id="@+id/coverImage"
         android:layout_width="match_parent"
-        android:layout_height="150dp"
-        android:layout_centerHorizontal="true"
+        android:layout_height="120dp"
+        android:scaleType="fitXY"
+        android:layout_alignParentStart="true"
         android:layout_marginTop="10dp"
         android:contentDescription="@string/cover_image_desc"
         app:srcCompat="@drawable/cover_image" />

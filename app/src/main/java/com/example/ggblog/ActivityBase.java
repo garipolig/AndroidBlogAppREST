@@ -18,6 +18,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -45,19 +46,17 @@ import java.io.UnsupportedEncodingException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.Locale;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/* Base class for the other Activities, which hosts all the common code */
 public abstract class ActivityBase extends AppCompatActivity {
 
     private static final String TAG = "ActivityBase";
-    public static final boolean DBG = true;
-    public static final boolean VDBG = true;
+    public static final boolean DBG = Log.isLoggable(TAG, Log.DEBUG);
+    public static final boolean VDBG = Log.isLoggable(TAG, Log.VERBOSE);
 
     protected static final String EXTRA_MESSAGE = "com.example.ggblog.extra.MESSAGE";
 
@@ -67,17 +66,6 @@ public abstract class ActivityBase extends AppCompatActivity {
 
     /* The format to be used for displaying in UI */
     private static final String UI_DATE_FORMAT = "dd.MM.yyyy 'at' HH:mm:ss z" ;
-
-    /*
-    SharedPreferences in common for all the Activities
-    */
-    private static final Set<String> PREFERENCES_KEYS =
-            new HashSet<>(Arrays.asList(
-                    SettingsActivity.PREF_WEB_SERVER_URL_KEY,
-                    SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_KEY,
-                    SettingsActivity.PREF_CACHE_HIT_TIME_KEY,
-                    SettingsActivity.PREF_CACHE_EXPIRATION_TIME_KEY
-            ));
 
     private NetworkChangeReceiver mNetworkChangeReceiver;
     protected SharedPreferences mSharedPreferences;
@@ -104,6 +92,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     private Button mPrevPageButton;
     private Button mNextPageButton;
     private Button mLastPageButton;
+    private ProgressBar mProgressBar;
 
     /* Last URL request sent to server */
     private String mLastUrlRequestSentToServer;
@@ -328,11 +317,27 @@ public abstract class ActivityBase extends AppCompatActivity {
     */
     protected abstract void handleServerResponse(JSONArray response);
 
+    /* Each activity knows how to handle the change of those SharedPreferences */
+    protected abstract void handleSubPageChanged();
+    protected abstract void handleMaxNumItemsPerPageChanged();
+    protected abstract void handleOrderingMethodChanged();
+
     /*
     Each activity perform the request to the Web Server using a specific TAG, to be able to
     cancel the ongoing requests when not yet sent to the network (still in the queue on our side)
     */
     protected abstract String getRequestTag();
+
+    /*
+    Those parameters are handled at the same way, but each Activity has its own key
+    and default value to be considered from SharedPreferences
+    */
+    protected abstract String getSubPagePrefKey();
+    protected abstract String getSubPagePrefDefault();
+    protected abstract String getMaxNumPerPagePrefKey();
+    protected abstract String getMaxNumPerPagePrefDefault();
+    protected abstract String getOrderingMethodPrefKey();
+    protected abstract String getOrderingMethodPrefDefault();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -364,9 +369,11 @@ public abstract class ActivityBase extends AppCompatActivity {
         mPrevPageButton = findViewById(R.id.buttonPrevPage);
         mNextPageButton = findViewById(R.id.buttonNextPage);
         mLastPageButton = findViewById(R.id.buttonLastPage);
+        mProgressBar = findViewById(R.id.progressBar);
         if (toolbar != null && mPageCountersTextView != null && mItemsListTitleTextView != null &&
                 mItemsListContentListView != null && mFirstPageButton != null &&
-                mPrevPageButton != null && mNextPageButton != null && mLastPageButton != null) {
+                mPrevPageButton != null && mNextPageButton != null && mLastPageButton != null &&
+                mProgressBar != null) {
             registerSharedPreferencesListener();
             registerNetworkChangeReceiver();
             setSupportActionBar(toolbar);
@@ -487,12 +494,14 @@ public abstract class ActivityBase extends AppCompatActivity {
                 @Override
                 public void onResponse(JSONArray response) {
                     if (DBG) Log.d(TAG, "Response: " + response);
+                    mProgressBar.setVisibility(View.GONE);
                     handleServerResponse(response);
                 }
             }, new Response.ErrorListener() {
                 @Override
                 public void onErrorResponse(VolleyError error) {
                     Log.e(TAG, "Error while retrieving data from server");
+                    mProgressBar.setVisibility(View.GONE);
                     handleServerErrorResponse(error);
                 }
             });
@@ -500,6 +509,7 @@ public abstract class ActivityBase extends AppCompatActivity {
             jsonArrayRequest.setTag(getRequestTag());
             NetworkRequestUtils.getInstance(this.getApplicationContext()).addToRequestQueue(
                     jsonArrayRequest);
+            mProgressBar.setVisibility(View.VISIBLE);
         } else {
             Log.e(TAG, "URL null or empty");
         }
@@ -727,7 +737,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     }
 
     protected void exitApplication() {
-        if (VDBG) Log.d(TAG, "exitApplication Current Class=" + this.getClass().getName());
+        if (VDBG) Log.d(TAG, "exitApplication Current Class=" + this.getLocalClassName());
         if (this instanceof MainActivity) {
             finish();
         } else {
@@ -774,52 +784,11 @@ public abstract class ActivityBase extends AppCompatActivity {
         }
     }
 
+    /* Retrieving all the sharedPreferences synchronously  */
     protected void retrieveSettings() {
-        if (VDBG) Log.d(TAG, "retrieveSettings for " + PREFERENCES_KEYS);
-        for (String key : PREFERENCES_KEYS) {
+        if (VDBG) Log.d(TAG, "retrieveSettings");
+        for (String key : SettingsActivity.PREFERENCES_LIST_KEYS) {
             retrieveSetting(key);
-        }
-    }
-
-    protected void handleSettingChange(String key) {
-        if (PREFERENCES_KEYS.contains(key)) {
-            if (VDBG) Log.d(TAG, "handleSettingChange key=" + key);
-            /* Retrieving the new value */
-            boolean isValueChanged = retrieveSetting(key);
-            if (isValueChanged) {
-                if (DBG) Log.d(TAG, "KEY_CHANGED=" + key);
-                /* Perform a special action depending on the setting that has changed */
-                switch (key) {
-                    case SettingsActivity.PREF_WEB_SERVER_URL_KEY:
-                        Toast.makeText(getApplicationContext(),
-                                getString(R.string.application_restart), Toast.LENGTH_SHORT).show();
-                        /* Go back to main page to reload the data from new Web Server URL */
-                        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-                        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        startActivity(intent);
-                        break;
-                    case SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_KEY:
-                        /* Synchronously retrieve the network connectivity */
-                        boolean isConnected = retrieveNetworkConnectivityStatus();
-                        if (isConnected) {
-                            handleAutoRetry();
-                        }
-                    case SettingsActivity.PREF_CACHE_HIT_TIME_KEY:
-                    case SettingsActivity.PREF_CACHE_EXPIRATION_TIME_KEY:
-                        /*
-                        Clearing the whole cache: the new caching mechanism will be taken into
-                        account starting from the next request to the Server
-                        */
-                        NetworkRequestUtils.getInstance(this.getApplicationContext()).clearCache();
-                        break;
-                    default:
-                        break;
-                }
-            } else {
-                if (VDBG) Log.d(TAG, "KEY_NOT_CHANGED=" + key + " -> Nothing to do");
-            }
         }
     }
 
@@ -829,84 +798,172 @@ public abstract class ActivityBase extends AppCompatActivity {
     */
     protected boolean retrieveSetting(String key) {
         boolean isValueChanged = false;
-        if (PREFERENCES_KEYS.contains(key)) {
-            if (VDBG) Log.d(TAG, "retrieveSetting key=" + key);
-            switch (key) {
-                case SettingsActivity.PREF_WEB_SERVER_URL_KEY:
-                    /* If the  */
-                    String webServerUrl = mSharedPreferences.getString(
-                            SettingsActivity.PREF_WEB_SERVER_URL_KEY,
-                            SettingsActivity.PREF_WEB_SERVER_URL_DEFAULT);
-                    if (webServerUrl != null) {
-                        if (!webServerUrl.equals(mWebServerUrlPref)) {
-                            mWebServerUrlPref = webServerUrl;
-                            isValueChanged = true;
-                            /*
-                            Understanding if the connection is HTTP or HTTPS
-                            It cannot be another type, since we have already validated it
-                            */
-                            if (mWebServerUrlPref.startsWith(UrlParams.HTTPS_HEADER)) {
-                                if (DBG) Log.d(TAG, "Connection type is HTTPS");
-                                mIsHttpsConnection = true;
-                            } else {
-                                if (DBG) Log.d(TAG, "Connection type is HTTP");
-                                mIsHttpsConnection = false;
-                            }
-                            if (DBG) Log.d(TAG, "Web Server URL=" + mWebServerUrlPref + "," +
-                                    "HTTPS=" + mIsHttpsConnection);
-                        }
-                    } else {
-                        Log.e(TAG, "Unable to retrieve the Web Server URL");
-                    }
-                    break;
-                case SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_KEY:
-                    boolean isAutoRetryWhenOnlineEnabled = mSharedPreferences.getBoolean(
-                            SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_KEY,
-                            SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_DEFAULT);
-                    if (isAutoRetryWhenOnlineEnabled != mIsAutoRetryWhenOnlineEnabledPref) {
-                        mIsAutoRetryWhenOnlineEnabledPref = isAutoRetryWhenOnlineEnabled;
+        if (VDBG) Log.d(TAG, "KEY_RETRIEVED=" + key);
+        if (key != null) {
+            /* SECTION 1: This section contains the preferences in common for all the Activities */
+            if (key.equals(SettingsActivity.PREF_WEB_SERVER_URL_KEY)) {
+                String webServerUrl = mSharedPreferences.getString(
+                        SettingsActivity.PREF_WEB_SERVER_URL_KEY,
+                        SettingsActivity.PREF_WEB_SERVER_URL_DEFAULT);
+                if (webServerUrl != null) {
+                    if (!webServerUrl.equals(mWebServerUrlPref)) {
+                        mWebServerUrlPref = webServerUrl;
                         isValueChanged = true;
-                        if (DBG) Log.d(TAG, "Auto-Retry When Online Enabled=" +
-                                mIsAutoRetryWhenOnlineEnabledPref);
+                        /*
+                        Understanding if the connection is HTTP or HTTPS
+                        It cannot be another type, since we have already validated it
+                        */
+                        if (mWebServerUrlPref.startsWith(UrlParams.HTTPS_HEADER)) {
+                            if (DBG) Log.d(TAG, "Connection type is HTTPS");
+                            mIsHttpsConnection = true;
+                        } else {
+                            if (DBG) Log.d(TAG, "Connection type is HTTP");
+                            mIsHttpsConnection = false;
+                        }
+                        if (DBG) Log.d(TAG, "Web Server URL=" + mWebServerUrlPref + "," +
+                                "HTTPS=" + mIsHttpsConnection);
                     }
-                    break;
-                case SettingsActivity.PREF_CACHE_HIT_TIME_KEY:
-                    String cacheHitTime = mSharedPreferences.getString(
+                } else {
+                    Log.e(TAG, "Unable to retrieve the Web Server URL");
+                }
+            } else if (key.equals(SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_KEY)) {
+                boolean isAutoRetryWhenOnlineEnabled = mSharedPreferences.getBoolean(
+                        SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_KEY,
+                        SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_DEFAULT);
+                if (isAutoRetryWhenOnlineEnabled != mIsAutoRetryWhenOnlineEnabledPref) {
+                    mIsAutoRetryWhenOnlineEnabledPref = isAutoRetryWhenOnlineEnabled;
+                    isValueChanged = true;
+                    if (DBG) Log.d(TAG, "Auto-Retry When Online Enabled=" +
+                            mIsAutoRetryWhenOnlineEnabledPref);
+                }
+            } else if (key.equals(SettingsActivity.PREF_CACHE_HIT_TIME_KEY)) {
+                String cacheHitTime = mSharedPreferences.getString(
                         SettingsActivity.PREF_CACHE_HIT_TIME_KEY,
                         SettingsActivity.PREF_CACHE_HIT_TIME_DEFAULT);
-                    if (cacheHitTime != null) {
-                        long cacheHitTimeLong = Long.parseLong(cacheHitTime);
-                        if (cacheHitTimeLong != mCacheHitTimePref) {
-                            mCacheHitTimePref = cacheHitTimeLong;
-                            isValueChanged = true;
-                            if (DBG) Log.d(TAG, "Cache Hit Time=" +
-                                    mCacheHitTimePref);
-                        }
-                    } else {
-                        Log.e(TAG, "Unable to retrieve the Cache Hit Time");
+                if (cacheHitTime != null) {
+                    long cacheHitTimeLong = Long.parseLong(cacheHitTime);
+                    if (cacheHitTimeLong != mCacheHitTimePref) {
+                        mCacheHitTimePref = cacheHitTimeLong;
+                        isValueChanged = true;
+                        if (DBG) Log.d(TAG, "Cache Hit Time=" +
+                                mCacheHitTimePref);
                     }
-                    break;
-                case SettingsActivity.PREF_CACHE_EXPIRATION_TIME_KEY:
-                    String cacheExpirationTime = mSharedPreferences.getString(
-                            SettingsActivity.PREF_CACHE_EXPIRATION_TIME_KEY,
-                            SettingsActivity.PREF_CACHE_EXPIRATION_TIME_DEFAULT);
-                    if (cacheExpirationTime != null) {
-                        long cacheExpirationTimeLong = Long.parseLong(cacheExpirationTime);
-                        if (cacheExpirationTimeLong != mCacheExpirationTimePref) {
-                            mCacheExpirationTimePref = cacheExpirationTimeLong;
-                            isValueChanged = true;
-                            if (DBG) Log.d(TAG, "Cache Expiration Time=" +
-                                    mCacheExpirationTimePref);
-                        }
-                    } else {
-                        Log.e(TAG, "Unable to retrieve the Cache Expiration Time");
+                } else {
+                    Log.e(TAG, "Unable to retrieve the Cache Hit Time");
+                }
+            } else if (key.equals(SettingsActivity.PREF_CACHE_EXPIRATION_TIME_KEY)) {
+                String cacheExpirationTime = mSharedPreferences.getString(
+                        SettingsActivity.PREF_CACHE_EXPIRATION_TIME_KEY,
+                        SettingsActivity.PREF_CACHE_EXPIRATION_TIME_DEFAULT);
+                if (cacheExpirationTime != null) {
+                    long cacheExpirationTimeLong = Long.parseLong(cacheExpirationTime);
+                    if (cacheExpirationTimeLong != mCacheExpirationTimePref) {
+                        mCacheExpirationTimePref = cacheExpirationTimeLong;
+                        isValueChanged = true;
+                        if (DBG) Log.d(TAG, "Cache Expiration Time=" +
+                                mCacheExpirationTimePref);
                     }
-                    break;
-                default:
-                    break;
+                } else {
+                    Log.e(TAG, "Unable to retrieve the Cache Expiration Time");
+                }
+            /* SECTION 2: This section contains the preferences dependent on the type of Activity */
+            } else if (key.equals(getSubPagePrefKey())) {
+                String subPage = mSharedPreferences.getString(
+                        getSubPagePrefKey(),
+                        getSubPagePrefDefault());
+                if (subPage != null) {
+                    if (!subPage.equals(mSubPagePref)) {
+                        mSubPagePref = subPage;
+                        isValueChanged = true;
+                        if (DBG) Log.d(TAG, "SubPage=" + mSubPagePref + " for " +
+                                this.getLocalClassName());
+                    }
+                } else {
+                    Log.e(TAG, "Unable to retrieve SubPage for " + this.getLocalClassName());
+                }
+            } else if (key.equals(getMaxNumPerPagePrefKey())) {
+                String maxNumItemsPerPage = mSharedPreferences.getString(
+                        getMaxNumPerPagePrefKey(),
+                        getMaxNumPerPagePrefDefault());
+                if (maxNumItemsPerPage != null) {
+                    if (!maxNumItemsPerPage.equals(mMaxNumItemsPerPagePref)) {
+                        mMaxNumItemsPerPagePref = maxNumItemsPerPage;
+                        isValueChanged = true;
+                        if (DBG) Log.d(TAG, "Max Num Items/Page=" +
+                                mMaxNumItemsPerPagePref + " for " + this.getLocalClassName());
+                    }
+                } else {
+                    Log.e(TAG, "Unable to retrieve the Max Num Items/Page for " +
+                            this.getLocalClassName());
+                }
+            } else if (key.equals(getOrderingMethodPrefKey())) {
+                String mItemsOrderingMethod = mSharedPreferences.getString(
+                        getOrderingMethodPrefKey(),
+                        getOrderingMethodPrefDefault());
+                if (mItemsOrderingMethod != null) {
+                    if (!mItemsOrderingMethod.equals(mItemsOrderingMethodPref)) {
+                        mItemsOrderingMethodPref = mItemsOrderingMethod;
+                        isValueChanged = true;
+                        if (DBG) Log.d(TAG, "Items Ordering Method=" +
+                                mItemsOrderingMethodPref + " for " + this.getLocalClassName());
+                    }
+                } else {
+                    Log.e(TAG, "Unable to retrieve the Items Ordering Method for " +
+                            this.getLocalClassName());
+                }
+            } else {
+                if (VDBG) Log.d(TAG, "Nothing to do for " + key + " in " +
+                        this.getLocalClassName());
             }
+        } else {
+            Log.e(TAG, "Key is NULL");
         }
         return isValueChanged;
+    }
+
+    protected void handleSettingChange(String key) {
+        if (VDBG) Log.d(TAG, "handleSettingChange key=" + key);
+        /* Retrieving the new value */
+        boolean isValueChanged = retrieveSetting(key);
+        if (isValueChanged) {
+            if (DBG) Log.d(TAG, "KEY_CHANGED=" + key);
+            /* Perform a special action depending on the setting that has changed */
+            /* SECTION 1: This section contains the preferences in common for all the Activities */
+            if (key.equals(SettingsActivity.PREF_WEB_SERVER_URL_KEY)) {
+                Toast.makeText(getApplicationContext(),
+                        getString(R.string.application_restart), Toast.LENGTH_SHORT).show();
+                /* Go back to main page to reload the data from new Web Server URL */
+                Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+            } else if (key.equals(SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_KEY)) {
+                /* Synchronously retrieve the network connectivity */
+                boolean isConnected = retrieveNetworkConnectivityStatus();
+                if (isConnected) {
+                    handleAutoRetry();
+                }
+            } else if (key.equals(SettingsActivity.PREF_CACHE_HIT_TIME_KEY) ||
+                    key.equals(SettingsActivity.PREF_CACHE_EXPIRATION_TIME_KEY)) {
+                /*
+                Clearing the whole cache: the new caching mechanism will be taken into
+                account starting from the next request to the Server
+                */
+                NetworkRequestUtils.getInstance(this.getApplicationContext()).clearCache();
+            /* SECTION 2: This section contains the preferences dependent on the type of Activity */
+            } else if (key.equals(getSubPagePrefKey())) {
+                handleSubPageChanged();
+            } else if (key.equals(getMaxNumPerPagePrefKey())) {
+                handleMaxNumItemsPerPageChanged();
+            } else if (key.equals(getOrderingMethodPrefKey())) {
+                handleOrderingMethodChanged();
+            } else {
+                if (VDBG) Log.d(TAG, "Nothing to do for " + key);
+            }
+        } else {
+            if (VDBG) Log.d(TAG, "KEY_NOT_CHANGED=" + key + " -> Nothing to do");
+        }
     }
 
     private void registerSharedPreferencesListener() {

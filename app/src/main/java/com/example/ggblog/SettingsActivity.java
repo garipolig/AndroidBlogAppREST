@@ -12,6 +12,11 @@ import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceManager;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
+/* Handles the SharedPreferences (user settings) */
 public class SettingsActivity extends AppCompatActivity {
 
     private static final String TAG = "SettingsActivity";
@@ -57,6 +62,26 @@ public class SettingsActivity extends AppCompatActivity {
     private static final String MAX_NUM_ITEMS_PER_PAGE_REGEXP = "^[1-9][0-9]*$";
     /* URL must contain http:// or https:// + any character */
     private static final String WEB_SERVER_URL_REGEXP = "^(https?)://.+";
+
+    /*
+    List of all the SharedPreference key we are able to handle.
+    We will iterate over this list at the start of the application, to retrieve all the Preferences.
+    */
+    public static final Set<String> PREFERENCES_LIST_KEYS = new HashSet<>(Arrays.asList(
+            SettingsActivity.PREF_WEB_SERVER_URL_KEY,
+            SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_KEY,
+            SettingsActivity.PREF_CACHE_HIT_TIME_KEY,
+            SettingsActivity.PREF_CACHE_EXPIRATION_TIME_KEY,
+            SettingsActivity.PREF_AUTHORS_SUB_PAGE_KEY,
+            SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY,
+            SettingsActivity.PREF_AUTHORS_ORDERING_METHOD_KEY,
+            SettingsActivity.PREF_POSTS_SUB_PAGE_KEY,
+            SettingsActivity.PREF_MAX_NUM_POSTS_PER_PAGE_KEY,
+            SettingsActivity.PREF_POSTS_ORDERING_METHOD_KEY,
+            SettingsActivity.PREF_COMMENTS_SUB_PAGE_KEY,
+            SettingsActivity.PREF_MAX_NUM_COMMENTS_PER_PAGE_KEY,
+            SettingsActivity.PREF_COMMENTS_ORDERING_METHOD_KEY
+    ));
 
     private static SettingsActivity INSTANCE;
 
