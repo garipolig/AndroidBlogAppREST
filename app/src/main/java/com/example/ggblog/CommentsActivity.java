@@ -29,9 +29,6 @@ public class CommentsActivity extends ActivityBase {
 
     private static final String TAG = "CommentsActivity";
 
-    /* To identify the Server requests made by this Activity, to cancel them if needed */
-    private static final String REQUEST_TAG = "COMMENTS_LIST_REQUEST";
-
     private Post mCurrentPost;
 
     /*
@@ -159,8 +156,8 @@ public class CommentsActivity extends ActivityBase {
     Implementing this method because it's abstract in base class.
     But it will be never called, since the comments are not clickable.
     */
-    protected void onItemClicked(int position) {
-        if (VDBG) Log.d(TAG, "onItemClicked position=" + position);
+    protected void handleItemClicked(int position) {
+        if (VDBG) Log.d(TAG, "handleItemClicked position=" + position);
         Log.e(TAG, "This method shall not be called: onItemClickListener is disabled");
     }
 
@@ -280,10 +277,6 @@ public class CommentsActivity extends ActivityBase {
         ArrayAdapter<Comment> listAdapter =
                 new CustomAdapter(getApplicationContext(), R.layout.comment_row, commentsList);
         mItemsListContentListView.setAdapter(listAdapter);
-    }
-
-    protected String getRequestTag() {
-        return REQUEST_TAG;
     }
 
     protected String getSubPagePrefKey() {

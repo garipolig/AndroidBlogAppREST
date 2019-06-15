@@ -26,9 +26,6 @@ public class MainActivity extends ActivityBase {
 
     private static final String TAG = "MainActivity";
 
-    /* To identify the Server requests made by this Activity, to cancel them if needed */
-    private static final String REQUEST_TAG = "AUTHORS_LIST_REQUEST";
-
     /*
     Needed to fill the table (ListView) of Authors, using the specific row layout for the Author
     (see author_row.xml)
@@ -86,7 +83,7 @@ public class MainActivity extends ActivityBase {
         Making sure the cache is cleared when the application starts, to have fresh data.
         It's up to the MainActivity (the application entry point) to do that
         */
-        NetworkRequestUtils.getInstance(this.getApplicationContext()).clearCache();
+        NetworkRequestUtils.getInstance(getApplicationContext()).clearCache();
 
         /* When activity is created, retrieve the authors to show */
         retrieveInitialDataFromServer();
@@ -96,10 +93,14 @@ public class MainActivity extends ActivityBase {
         return R.layout.activity_main;
     }
 
-    protected void onItemClicked(int position) {
-        if (VDBG) Log.d(TAG, "onItemClicked position=" + position);
-        /* Cancel any ongoing requests made by this Activity, since we are switching to a new one */
-        NetworkRequestUtils.getInstance(getApplicationContext()).cancelAllRequests(REQUEST_TAG);
+    protected void handleItemClicked(int position) {
+        if (VDBG) Log.d(TAG, "handleItemClicked position=" + position);
+        /*
+        Cancel any ongoing requests made by this Activity, since we are switching to a new one.
+        The Class Name is used as tag (the same used to trigger the request).
+        */
+        NetworkRequestUtils.getInstance(getApplicationContext()).cancelAllRequests(
+                getLocalClassName());
         /* Author is surely valid, since we have checked before inserting it to the list  */
         Author author = getItemAtPosition(position);
         Intent intent = new Intent(getApplicationContext(), PostsActivity.class);
@@ -213,10 +214,6 @@ public class MainActivity extends ActivityBase {
         ArrayAdapter<Author> listAdapter =
                 new CustomAdapter(getApplicationContext(), R.layout.author_row, authorsList);
         mItemsListContentListView.setAdapter(listAdapter);
-    }
-
-    protected String getRequestTag() {
-        return REQUEST_TAG;
     }
 
     protected String getSubPagePrefKey() {

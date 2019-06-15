@@ -310,7 +310,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     /*
     Each Activity knows what to do when an item (author, post...) is selected (clicked) "
     */
-    protected abstract void onItemClicked(int position);
+    protected abstract void handleItemClicked(int position);
 
     /*
     Each Activity knows how to handle the Server response
@@ -321,12 +321,6 @@ public abstract class ActivityBase extends AppCompatActivity {
     protected abstract void handleSubPageChanged();
     protected abstract void handleMaxNumItemsPerPageChanged();
     protected abstract void handleOrderingMethodChanged();
-
-    /*
-    Each activity perform the request to the Web Server using a specific TAG, to be able to
-    cancel the ongoing requests when not yet sent to the network (still in the queue on our side)
-    */
-    protected abstract String getRequestTag();
 
     /*
     Those parameters are handled at the same way, but each Activity has its own key
@@ -381,7 +375,7 @@ public abstract class ActivityBase extends AppCompatActivity {
                 public void onItemClick(AdapterView<?> parent, final View view,
                                         int position, long id) {
                     if (VDBG) Log.d(TAG, "onItemClick position=" + position + ", id=" + id);
-                    onItemClicked(position);
+                    handleItemClicked(position);
                 }
             });
             mFirstPageButton.setOnClickListener(new OnClickListener() {
@@ -475,9 +469,10 @@ public abstract class ActivityBase extends AppCompatActivity {
             Cancel all the ongoing requests (if any) related to the previous URL requested.
             This can happens for example when the user ask for a new page while the results for
             the current page has not yet been threaded by the server.
+            All the requests made by a given Activity are tagged with its Class Name
             */
             NetworkRequestUtils.getInstance(
-                    getApplicationContext()).cancelAllRequests(getRequestTag());
+                    getApplicationContext()).cancelAllRequests(getLocalClassName());
             /* Updating the old URL Request with the new one */
             mLastUrlRequestSentToServer = url;
             /*
@@ -505,9 +500,9 @@ public abstract class ActivityBase extends AppCompatActivity {
                     handleServerErrorResponse(error);
                 }
             });
-            /* Add the request to the RequestQueue */
-            jsonArrayRequest.setTag(getRequestTag());
-            NetworkRequestUtils.getInstance(this.getApplicationContext()).addToRequestQueue(
+            /* Add the request to the RequestQueue. The request is tagged with the Class Name */
+            jsonArrayRequest.setTag(getLocalClassName());
+            NetworkRequestUtils.getInstance(getApplicationContext()).addToRequestQueue(
                     jsonArrayRequest);
             mProgressBar.setVisibility(View.VISIBLE);
         } else {
@@ -593,7 +588,7 @@ public abstract class ActivityBase extends AppCompatActivity {
         if (url != null && !url.isEmpty()) {
             if (networkImageView != null) {
                 networkImageView.setImageUrl(url, NetworkRequestUtils.getInstance(
-                        this.getApplicationContext()).getImageLoader());
+                        getApplicationContext()).getImageLoader());
             } else {
                 Log.e(TAG, "unable to retrieve the networkImageView");
             }
@@ -718,7 +713,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     private void refresh() {
         if (VDBG) Log.d(TAG, "refresh");
         /* First of all clearing the cache */
-        NetworkRequestUtils.getInstance(this.getApplicationContext()).clearCache();
+        NetworkRequestUtils.getInstance(getApplicationContext()).clearCache();
         /*
         mCurrentPageUrlRequest is the current page url returned by the Web Server.
         It won't be set in case we didn't succeed to contact the Server.
@@ -737,7 +732,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     }
 
     protected void exitApplication() {
-        if (VDBG) Log.d(TAG, "exitApplication Current Class=" + this.getLocalClassName());
+        if (VDBG) Log.d(TAG, "exitApplication Current Class=" + getLocalClassName());
         if (this instanceof MainActivity) {
             finish();
         } else {
@@ -876,10 +871,10 @@ public abstract class ActivityBase extends AppCompatActivity {
                         mSubPagePref = subPage;
                         isValueChanged = true;
                         if (DBG) Log.d(TAG, "SubPage=" + mSubPagePref + " for " +
-                                this.getLocalClassName());
+                                getLocalClassName());
                     }
                 } else {
-                    Log.e(TAG, "Unable to retrieve SubPage for " + this.getLocalClassName());
+                    Log.e(TAG, "Unable to retrieve SubPage for " + getLocalClassName());
                 }
             } else if (key.equals(getMaxNumPerPagePrefKey())) {
                 String maxNumItemsPerPage = mSharedPreferences.getString(
@@ -890,11 +885,11 @@ public abstract class ActivityBase extends AppCompatActivity {
                         mMaxNumItemsPerPagePref = maxNumItemsPerPage;
                         isValueChanged = true;
                         if (DBG) Log.d(TAG, "Max Num Items/Page=" +
-                                mMaxNumItemsPerPagePref + " for " + this.getLocalClassName());
+                                mMaxNumItemsPerPagePref + " for " + getLocalClassName());
                     }
                 } else {
                     Log.e(TAG, "Unable to retrieve the Max Num Items/Page for " +
-                            this.getLocalClassName());
+                            getLocalClassName());
                 }
             } else if (key.equals(getOrderingMethodPrefKey())) {
                 String mItemsOrderingMethod = mSharedPreferences.getString(
@@ -905,15 +900,15 @@ public abstract class ActivityBase extends AppCompatActivity {
                         mItemsOrderingMethodPref = mItemsOrderingMethod;
                         isValueChanged = true;
                         if (DBG) Log.d(TAG, "Items Ordering Method=" +
-                                mItemsOrderingMethodPref + " for " + this.getLocalClassName());
+                                mItemsOrderingMethodPref + " for " + getLocalClassName());
                     }
                 } else {
                     Log.e(TAG, "Unable to retrieve the Items Ordering Method for " +
-                            this.getLocalClassName());
+                            getLocalClassName());
                 }
             } else {
                 if (VDBG) Log.d(TAG, "Nothing to do for " + key + " in " +
-                        this.getLocalClassName());
+                        getLocalClassName());
             }
         } else {
             Log.e(TAG, "Key is NULL");
@@ -950,7 +945,7 @@ public abstract class ActivityBase extends AppCompatActivity {
                 Clearing the whole cache: the new caching mechanism will be taken into
                 account starting from the next request to the Server
                 */
-                NetworkRequestUtils.getInstance(this.getApplicationContext()).clearCache();
+                NetworkRequestUtils.getInstance(getApplicationContext()).clearCache();
             /* SECTION 2: This section contains the preferences dependent on the type of Activity */
             } else if (key.equals(getSubPagePrefKey())) {
                 handleSubPageChanged();

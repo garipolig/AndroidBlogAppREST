@@ -33,9 +33,6 @@ public class PostsActivity extends ActivityBase {
 
     private static final String TAG = "PostsActivity";
 
-    /* To identify the Server requests made by this Activity, to cancel them if needed */
-    private static final String REQUEST_TAG = "POSTS_LIST_REQUEST";
-
     private Author mCurrentAuthor;
 
     /*
@@ -134,10 +131,14 @@ public class PostsActivity extends ActivityBase {
         return R.layout.activity_posts;
     }
 
-    protected void onItemClicked(int position) {
-        if (VDBG) Log.d(TAG, "onItemClicked position=" + position);
-        /* Cancel any ongoing requests made by this Activity, since we are switching to a new one */
-        NetworkRequestUtils.getInstance(getApplicationContext()).cancelAllRequests(REQUEST_TAG);
+    protected void handleItemClicked(int position) {
+        if (VDBG) Log.d(TAG, "handleItemClicked position=" + position);
+        /*
+        Cancel any ongoing requests made by this Activity, since we are switching to a new one.
+        The Class Name is used as tag (the same used to trigger the request).
+        */
+        NetworkRequestUtils.getInstance(getApplicationContext()).cancelAllRequests(
+                getLocalClassName());
         /* Post is surely valid, since we have checked before inserting it to the list  */
         Post post = getItemAtPosition(position);
         Intent intent = new Intent(getApplicationContext(), CommentsActivity.class);
@@ -298,10 +299,6 @@ public class PostsActivity extends ActivityBase {
         } else {
             if (VDBG) Log.d(TAG, "Latitude/Longitude are not available");
         }
-    }
-
-    protected String getRequestTag() {
-        return REQUEST_TAG;
     }
 
     protected String getSubPagePrefKey() {
