@@ -19,6 +19,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -55,8 +56,8 @@ import java.util.regex.Pattern;
 public abstract class ActivityBase extends AppCompatActivity {
 
     private static final String TAG = "ActivityBase";
-    public static final boolean DBG = Log.isLoggable(TAG, Log.DEBUG);
-    public static final boolean VDBG = Log.isLoggable(TAG, Log.VERBOSE);
+    public static final boolean DBG = true;
+    public static final boolean VDBG = true;
 
     protected static final String EXTRA_MESSAGE = "com.example.ggblog.extra.MESSAGE";
 
@@ -784,91 +785,128 @@ public abstract class ActivityBase extends AppCompatActivity {
         if (PREFERENCES_KEYS.contains(key)) {
             if (VDBG) Log.d(TAG, "handleSettingChange key=" + key);
             /* Retrieving the new value */
-            retrieveSetting(key);
-            /* Perform a special action depending on the setting that has changed */
-            switch (key) {
-                case SettingsActivity.PREF_WEB_SERVER_URL_KEY:
-                    /* Go back to main page, which will reload the data from new Web Server URL */
-                    Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-                    intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(intent);
-                    break;
-                case SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_KEY:
-                    /* Synchronously retrieve the network connectivity */
-                    boolean isConnected = retrieveNetworkConnectivityStatus();
-                    if (isConnected) {
-                        handleAutoRetry();
-                    }
-                case SettingsActivity.PREF_CACHE_HIT_TIME_KEY:
-                case SettingsActivity.PREF_CACHE_EXPIRATION_TIME_KEY:
-                    /*
-                    Clearing the whole cache: the new caching mechanism will be taken into
-                    account starting from the next request to the Server
-                    */
-                    NetworkRequestUtils.getInstance(this.getApplicationContext()).clearCache();
-                    break;
-                default:
-                    break;
+            boolean isValueChanged = retrieveSetting(key);
+            if (isValueChanged) {
+                if (DBG) Log.d(TAG, "KEY_CHANGED=" + key);
+                /* Perform a special action depending on the setting that has changed */
+                switch (key) {
+                    case SettingsActivity.PREF_WEB_SERVER_URL_KEY:
+                        Toast.makeText(getApplicationContext(),
+                                getString(R.string.application_restart), Toast.LENGTH_SHORT).show();
+                        /* Go back to main page to reload the data from new Web Server URL */
+                        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(intent);
+                        break;
+                    case SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_KEY:
+                        /* Synchronously retrieve the network connectivity */
+                        boolean isConnected = retrieveNetworkConnectivityStatus();
+                        if (isConnected) {
+                            handleAutoRetry();
+                        }
+                    case SettingsActivity.PREF_CACHE_HIT_TIME_KEY:
+                    case SettingsActivity.PREF_CACHE_EXPIRATION_TIME_KEY:
+                        /*
+                        Clearing the whole cache: the new caching mechanism will be taken into
+                        account starting from the next request to the Server
+                        */
+                        NetworkRequestUtils.getInstance(this.getApplicationContext()).clearCache();
+                        break;
+                    default:
+                        break;
+                }
+            } else {
+                if (VDBG) Log.d(TAG, "KEY_NOT_CHANGED=" + key + " -> Nothing to do");
             }
         }
     }
 
-    protected void retrieveSetting(String key) {
+    /*
+    All the user inputs are validated -> once we succeed on retrieving the sharedPreference
+    (value != null), its value is surely valid
+    */
+    protected boolean retrieveSetting(String key) {
+        boolean isValueChanged = false;
         if (PREFERENCES_KEYS.contains(key)) {
             if (VDBG) Log.d(TAG, "retrieveSetting key=" + key);
             switch (key) {
                 case SettingsActivity.PREF_WEB_SERVER_URL_KEY:
-                    /* TODO: validate the input from user. Prevent invalid values */
-                    mWebServerUrlPref = mSharedPreferences.getString(
+                    /* If the  */
+                    String webServerUrl = mSharedPreferences.getString(
                             SettingsActivity.PREF_WEB_SERVER_URL_KEY,
                             SettingsActivity.PREF_WEB_SERVER_URL_DEFAULT);
-                    if (mWebServerUrlPref != null) {
-                        /* Understanding if the connection is HTTP or HTTPS */
-                        if (mWebServerUrlPref.startsWith(UrlParams.HTTP_HEADER)) {
-                            if (DBG) Log.d(TAG, "Connection type is HTTP");
-                            mIsHttpsConnection = false;
-                        } else if (mWebServerUrlPref.startsWith(UrlParams.HTTPS_HEADER)) {
-                            if (DBG) Log.d(TAG, "Connection type is HTTPS");
-                            mIsHttpsConnection = true;
-                        } else {
-                            Log.e(TAG, "Invalid Web Server URL " + mWebServerUrlPref);
+                    if (webServerUrl != null) {
+                        if (!webServerUrl.equals(mWebServerUrlPref)) {
+                            mWebServerUrlPref = webServerUrl;
+                            isValueChanged = true;
+                            /*
+                            Understanding if the connection is HTTP or HTTPS
+                            It cannot be another type, since we have already validated it
+                            */
+                            if (mWebServerUrlPref.startsWith(UrlParams.HTTPS_HEADER)) {
+                                if (DBG) Log.d(TAG, "Connection type is HTTPS");
+                                mIsHttpsConnection = true;
+                            } else {
+                                if (DBG) Log.d(TAG, "Connection type is HTTP");
+                                mIsHttpsConnection = false;
+                            }
+                            if (DBG) Log.d(TAG, "Web Server URL=" + mWebServerUrlPref + "," +
+                                    "HTTPS=" + mIsHttpsConnection);
                         }
+                    } else {
+                        Log.e(TAG, "Unable to retrieve the Web Server URL");
                     }
-                    if (DBG) Log.d(TAG, "Web Server URL=" + mWebServerUrlPref + "," +
-                            "HTTPS=" + mIsHttpsConnection);
                     break;
                 case SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_KEY:
-                    mIsAutoRetryWhenOnlineEnabledPref = mSharedPreferences.getBoolean(
+                    boolean isAutoRetryWhenOnlineEnabled = mSharedPreferences.getBoolean(
                             SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_KEY,
                             SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_DEFAULT);
-                    if (DBG) Log.d(TAG, "Auto-Retry When Online Enabled=" +
-                            mIsAutoRetryWhenOnlineEnabledPref);
+                    if (isAutoRetryWhenOnlineEnabled != mIsAutoRetryWhenOnlineEnabledPref) {
+                        mIsAutoRetryWhenOnlineEnabledPref = isAutoRetryWhenOnlineEnabled;
+                        isValueChanged = true;
+                        if (DBG) Log.d(TAG, "Auto-Retry When Online Enabled=" +
+                                mIsAutoRetryWhenOnlineEnabledPref);
+                    }
                     break;
                 case SettingsActivity.PREF_CACHE_HIT_TIME_KEY:
-                    String cacheHitTimeString = mSharedPreferences.getString(
+                    String cacheHitTime = mSharedPreferences.getString(
                         SettingsActivity.PREF_CACHE_HIT_TIME_KEY,
                         SettingsActivity.PREF_CACHE_HIT_TIME_DEFAULT);
-                    if (cacheHitTimeString != null) {
-                        mCacheHitTimePref = Long.parseLong(cacheHitTimeString);
-                        if (DBG) Log.d(TAG, "Cache Hit Time=" + mCacheHitTimePref);
+                    if (cacheHitTime != null) {
+                        long cacheHitTimeLong = Long.parseLong(cacheHitTime);
+                        if (cacheHitTimeLong != mCacheHitTimePref) {
+                            mCacheHitTimePref = cacheHitTimeLong;
+                            isValueChanged = true;
+                            if (DBG) Log.d(TAG, "Cache Hit Time=" +
+                                    mCacheHitTimePref);
+                        }
+                    } else {
+                        Log.e(TAG, "Unable to retrieve the Cache Hit Time");
                     }
-                    if (DBG) Log.d(TAG, "Cache Hit Time=" + mCacheHitTimePref);
                     break;
                 case SettingsActivity.PREF_CACHE_EXPIRATION_TIME_KEY:
-                    String cacheExpirationTimeString = mSharedPreferences.getString(
+                    String cacheExpirationTime = mSharedPreferences.getString(
                             SettingsActivity.PREF_CACHE_EXPIRATION_TIME_KEY,
                             SettingsActivity.PREF_CACHE_EXPIRATION_TIME_DEFAULT);
-                    if (cacheExpirationTimeString != null) {
-                        mCacheExpirationTimePref = Long.parseLong(cacheExpirationTimeString);
+                    if (cacheExpirationTime != null) {
+                        long cacheExpirationTimeLong = Long.parseLong(cacheExpirationTime);
+                        if (cacheExpirationTimeLong != mCacheExpirationTimePref) {
+                            mCacheExpirationTimePref = cacheExpirationTimeLong;
+                            isValueChanged = true;
+                            if (DBG) Log.d(TAG, "Cache Expiration Time=" +
+                                    mCacheExpirationTimePref);
+                        }
+                    } else {
+                        Log.e(TAG, "Unable to retrieve the Cache Expiration Time");
                     }
-                    if (DBG) Log.d(TAG, "Cache Expiration Time=" + mCacheExpirationTimePref);
                     break;
                 default:
                     break;
             }
         }
+        return isValueChanged;
     }
 
     private void registerSharedPreferencesListener() {

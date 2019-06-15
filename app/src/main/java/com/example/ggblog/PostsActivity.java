@@ -211,20 +211,25 @@ public class PostsActivity extends ActivityBase {
         if (PREFERENCES_KEYS.contains(key)) {
             if (VDBG) Log.d(TAG, "handleSettingChange key=" + key);
             /* Retrieving the new value */
-            retrieveSetting(key);
-            /* Perform a special action depending on the setting that has changed */
-            switch (key) {
-                case SettingsActivity.PREF_POSTS_SUB_PAGE_KEY:
-                case SettingsActivity.PREF_MAX_NUM_POSTS_PER_PAGE_KEY:
-                case SettingsActivity.PREF_POSTS_ORDERING_METHOD_KEY:
-                    /*
-                    Re-creating again the list of Posts with the new pagination, as if we were
-                    starting again this Activity.
-                    */
-                    retrieveInitialDataFromServer(mCurrentAuthor);
-                    break;
-                default:
-                    break;
+            boolean isValueChanged = retrieveSetting(key);
+            if (isValueChanged) {
+                if (DBG) Log.d(TAG, "KEY_CHANGED=" + key);
+                /* Perform a special action depending on the setting that has changed */
+                switch (key) {
+                    case SettingsActivity.PREF_POSTS_SUB_PAGE_KEY:
+                    case SettingsActivity.PREF_MAX_NUM_POSTS_PER_PAGE_KEY:
+                    case SettingsActivity.PREF_POSTS_ORDERING_METHOD_KEY:
+                        /*
+                        Re-creating again the list of Posts with the new pagination, as if we were
+                        starting again this Activity.
+                        */
+                        retrieveInitialDataFromServer(mCurrentAuthor);
+                        break;
+                    default:
+                        break;
+                }
+            } else {
+                if (VDBG) Log.d(TAG, "KEY_NOT_CHANGED=" + key + " -> Nothing to do");
             }
         } else {
             super.handleSettingChange(key);
@@ -242,30 +247,59 @@ public class PostsActivity extends ActivityBase {
         super.retrieveSettings();
     }
 
+    /*
+    All the user inputs are validated -> once we succeed on retrieving the sharedPreference
+    (value != null), its value is surely valid
+    */
     @Override
-    protected void retrieveSetting(String key) {
+    protected boolean retrieveSetting(String key) {
+        boolean isValueChanged = false;
         if (PREFERENCES_KEYS.contains(key)) {
             if (VDBG) Log.d(TAG, "retrieveSetting key=" + key);
             switch (key) {
                 case SettingsActivity.PREF_POSTS_SUB_PAGE_KEY:
-                    /* TODO: validate the input from user. Prevent invalid values */
-                    mSubPagePref = mSharedPreferences.getString(
+                    String subPage = mSharedPreferences.getString(
                             SettingsActivity.PREF_POSTS_SUB_PAGE_KEY,
                             SettingsActivity.PREF_POSTS_SUB_PAGE_DEFAULT);
-                    if (DBG) Log.d(TAG, "SubPage=" + mSubPagePref);
+                    if (subPage != null) {
+                        if (!subPage.equals(mSubPagePref)) {
+                            mSubPagePref = subPage;
+                            isValueChanged = true;
+                            if (DBG) Log.d(TAG, "Posts SubPage=" + mSubPagePref);
+                        }
+                    } else {
+                        Log.e(TAG, "Unable to retrieve the Posts SubPage");
+                    }
                     break;
                 case SettingsActivity.PREF_MAX_NUM_POSTS_PER_PAGE_KEY:
-                    /* TODO: validate the input from user. Prevent invalid values */
-                    mMaxNumItemsPerPagePref = mSharedPreferences.getString(
+                    String maxNumItemsPerPage = mSharedPreferences.getString(
                             SettingsActivity.PREF_MAX_NUM_POSTS_PER_PAGE_KEY,
                             SettingsActivity.PREF_MAX_NUM_POSTS_PER_PAGE_DEFAULT);
-                    if (DBG) Log.d(TAG, "Max Num Posts/Page=" + mMaxNumItemsPerPagePref);
+                    if (maxNumItemsPerPage != null) {
+                        if (!maxNumItemsPerPage.equals(mMaxNumItemsPerPagePref)) {
+                            mMaxNumItemsPerPagePref = maxNumItemsPerPage;
+                            isValueChanged = true;
+                            if (DBG) Log.d(TAG, "Max Num Posts/Page=" +
+                                    mMaxNumItemsPerPagePref);
+                        }
+                    } else {
+                        Log.e(TAG, "Unable to retrieve the Max Num Posts/Page");
+                    }
                     break;
                 case SettingsActivity.PREF_POSTS_ORDERING_METHOD_KEY:
-                    mItemsOrderingMethodPref = mSharedPreferences.getString(
+                    String mItemsOrderingMethod = mSharedPreferences.getString(
                             SettingsActivity.PREF_POSTS_ORDERING_METHOD_KEY,
                             SettingsActivity.PREF_POSTS_ORDERING_METHOD_DEFAULT);
-                    if (DBG) Log.d(TAG, "Ordering Method=" + mItemsOrderingMethodPref);
+                    if (mItemsOrderingMethod != null) {
+                        if (!mItemsOrderingMethod.equals(mItemsOrderingMethodPref)) {
+                            mItemsOrderingMethodPref = mItemsOrderingMethod;
+                            isValueChanged = true;
+                            if (DBG) Log.d(TAG, "Posts Ordering Method=" +
+                                    mItemsOrderingMethodPref);
+                        }
+                    } else {
+                        Log.e(TAG, "Unable to retrieve the Posts Ordering Method");
+                    }
                     break;
                 default:
                     break;
@@ -273,6 +307,7 @@ public class PostsActivity extends ActivityBase {
         } else {
             super.retrieveSetting(key);
         }
+        return isValueChanged;
     }
 
     protected void handleServerResponse(JSONArray response) {

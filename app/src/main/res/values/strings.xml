@@ -24,6 +24,8 @@
     <string name="server_error_authentication">Authentication Failure</string>
     <string name="server_error_parsing">Parsing Error</string>
     <string name="unknown_date">Unknown Date</string>
+    <string name="invalid_value_entered">Invalid Value Entered (Previous Value Kept)</string>
+    <string name="application_restart">Restarting the Application &#8230;</string>
     <string name="no">No</string>
     <string name="cover_image_desc">Cover Image</string>
     <string name="page">Page</string>

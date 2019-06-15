@@ -7,7 +7,10 @@ import android.view.MenuItem;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.preference.EditTextPreference;
+import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
+import androidx.preference.PreferenceManager;
 
 public class SettingsActivity extends AppCompatActivity {
 
@@ -50,10 +53,67 @@ public class SettingsActivity extends AppCompatActivity {
     public static final String PREF_COMMENTS_ORDERING_METHOD_KEY = "commentsOrderingMethod";
     public static final String PREF_COMMENTS_ORDERING_METHOD_DEFAULT = "&_sort=date&_order=asc";
 
+    /* Max number of items must be more than 0 */
+    private static final String MAX_NUM_ITEMS_PER_PAGE_REGEXP = "^[1-9][0-9]*$";
+    /* URL must contain http:// or https:// + any character */
+    private static final String WEB_SERVER_URL_REGEXP = "^(https?)://.+";
+
+    private static SettingsActivity INSTANCE;
+
+    /* Needed to validate the value provided by the user in EditTextPreference (free text)  */
+    private static final Preference.OnPreferenceChangeListener PREFERENCE_CHANGE_LISTENER =
+            new Preference.OnPreferenceChangeListener() {
+
+        @Override
+        public boolean onPreferenceChange(Preference preference, Object newValue) {
+            String key = preference.getKey();
+            if (DBG) Log.d(TAG, "onPreferenceChange Key=" + key);
+            /* Only EditTextPreference allows free text */
+            if (preference instanceof EditTextPreference) {
+                String newPreferenceValue = newValue.toString();
+                boolean isPreferenceValid = true;
+                switch (key) {
+                    case PREF_WEB_SERVER_URL_KEY:
+                        if (!newPreferenceValue.matches(WEB_SERVER_URL_REGEXP)) {
+                            isPreferenceValid = false;
+                        }
+                    case PREF_AUTHORS_SUB_PAGE_KEY:
+                    case PREF_POSTS_SUB_PAGE_KEY:
+                    case PREF_COMMENTS_SUB_PAGE_KEY:
+                        /* Sub page cannot be empty */
+                        if (newPreferenceValue.isEmpty()) {
+                            isPreferenceValid = false;
+                        }
+                    break;
+                    case PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY:
+                    case PREF_MAX_NUM_POSTS_PER_PAGE_KEY:
+                    case PREF_MAX_NUM_COMMENTS_PER_PAGE_KEY:
+                        if (!newPreferenceValue.matches(MAX_NUM_ITEMS_PER_PAGE_REGEXP)) {
+                            isPreferenceValid = false;
+                        }
+                        break;
+                    default:
+                        break;
+                }
+                if (isPreferenceValid) {
+                    if (DBG) Log.d(TAG, "Valid value entered: " + newPreferenceValue);
+                    preference.setSummary(newPreferenceValue);
+                } else {
+                    Log.e(TAG, "Invalid value entered: " + newPreferenceValue);
+                    preference.setSummary(SettingsActivity.getInstance().getString(
+                            R.string.invalid_value_entered));
+                }
+                return isPreferenceValid;
+            }
+            return true;
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate");
+        INSTANCE = this;
         setContentView(R.layout.activity_settings);
         getSupportFragmentManager()
                 .beginTransaction()
@@ -70,7 +130,27 @@ public class SettingsActivity extends AppCompatActivity {
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
             if(VDBG) Log.d(TAG, "onCreatePreferences");
             setPreferencesFromResource(R.xml.preferences, rootKey);
+            bindPreferenceToChangeListener(findPreference(PREF_WEB_SERVER_URL_KEY));
+            bindPreferenceToChangeListener(findPreference(PREF_AUTHORS_SUB_PAGE_KEY));
+            bindPreferenceToChangeListener(findPreference(PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY));
+            bindPreferenceToChangeListener(findPreference(PREF_POSTS_SUB_PAGE_KEY));
+            bindPreferenceToChangeListener(findPreference(PREF_MAX_NUM_POSTS_PER_PAGE_KEY));
+            bindPreferenceToChangeListener(findPreference(PREF_COMMENTS_SUB_PAGE_KEY));
+            bindPreferenceToChangeListener(findPreference(PREF_MAX_NUM_COMMENTS_PER_PAGE_KEY));
         }
+    }
+
+    private static void bindPreferenceToChangeListener(Preference preference) {
+        if (DBG) Log.d(TAG, "bindPreferenceToChangeListener");
+        preference.setOnPreferenceChangeListener(PREFERENCE_CHANGE_LISTENER);
+        /*
+        Don't rely anymore on the default SummaryProvider. We will update the summary
+        by ourselves, depending if the preference value is valid or not
+        */
+        preference.setSummaryProvider(null);
+        PREFERENCE_CHANGE_LISTENER.onPreferenceChange(preference,
+                PreferenceManager.getDefaultSharedPreferences(
+                        preference.getContext()).getString(preference.getKey(), ""));
     }
 
     @Override
@@ -82,5 +162,9 @@ public class SettingsActivity extends AppCompatActivity {
         } else {
             return super.onOptionsItemSelected(item);
         }
+    }
+
+    private static SettingsActivity getInstance() {
+        return INSTANCE;
     }
 }
