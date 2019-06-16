@@ -55,65 +55,85 @@ import java.util.regex.Pattern;
 public abstract class ActivityBase extends AppCompatActivity {
 
     private static final String TAG = "ActivityBase";
+
+    /* All the classes of the package will use the same DBG/VDBG, retrieved from here  */
     public static final boolean DBG = Log.isLoggable(TAG, Log.DEBUG);
     public static final boolean VDBG = Log.isLoggable(TAG, Log.VERBOSE);
-
-    protected static final String EXTRA_MESSAGE = "com.example.ggblog.extra.MESSAGE";
-
-    protected static final String EXTRA_EXIT = "com.example.ggblog.extra.EXIT";
 
     private static final String CONNECTIVITY_CHANGE_ACTION = "android.net.conn.CONNECTIVITY_CHANGE";
 
     /* The format to be used for displaying in UI */
     private static final String UI_DATE_FORMAT = "dd.MM.yyyy 'at' HH:mm:ss z" ;
 
+    static final String EXTRA_MESSAGE = "com.example.ggblog.extra.MESSAGE";
+
+    static final String EXTRA_EXIT = "com.example.ggblog.extra.EXIT";
+
     private NetworkChangeReceiver mNetworkChangeReceiver;
-    protected SharedPreferences mSharedPreferences;
+    private SharedPreferences mSharedPreferences;
 
     /* Those preference are set through settings (shared preferences) */
-    protected String mWebServerUrlPref;
-    protected String mSubPagePref;
-    private boolean mIsAutoRetryWhenOnlineEnabledPref;
-    private long mCacheHitTimePref;
-    private long mCacheExpirationTimePref;
-    protected String mMaxNumItemsPerPagePref;
+    String mWebServerUrlPref;
+    String mSubPagePref;
+    boolean mIsAutoRetryWhenOnlineEnabledPref;
+    /*
+    Keeping it as a String since we don't need to to any calculation with it.
+    We just append it to the URL sent to the Web Server)
+    */
+    String mMaxNumItemsPerPagePref;
+    /*
+    Those preferences are used for the caching mechanism. Using them as long type, instead of
+    String, since additions are continuously done and we want to avoid making conversions every time
+    */
+    long mCacheHitTimePref;
+    long mCacheExpirationTimePref;
 
     /*
     Note: today in the user settings we are supporting only a single attribute for ordering
     It can be extended if needed.
     E.g. name ASC/DESC for Authors, date ASC/DESC for Posts and Comments
     */
-    protected String mItemsOrderingMethodPref;
+    String mItemsOrderingMethodPref;
 
-    private TextView mPageCountersTextView;
-    protected TextView mItemsListTitleTextView;
-    protected ListView mItemsListContentListView;
-    private Button mFirstPageButton;
-    private Button mPrevPageButton;
-    private Button mNextPageButton;
-    private Button mLastPageButton;
-    private ProgressBar mProgressBar;
+    TextView mPageCountersTextView;
+    TextView mItemsListTitleTextView;
+    ListView mItemsListContentListView;
+    Button mFirstPageButton;
+    Button mPrevPageButton;
+    Button mNextPageButton;
+    Button mLastPageButton;
+    ProgressBar mProgressBar;
 
-    /* Last URL request sent to server */
-    private String mLastUrlRequestSentToServer;
-    /* Current page URL received from server */
-    private String mCurrentPageUrlRequest;
+
+    /*
+    Last Request sent to server
+    It's only used when trying to refresh the page, in case we don't get any answer from Server
+    */
+    CustomJsonArrayRequest mLastJsonArrayRequestSent;
+
+    /*
+    Current Request that has been answered by the Server (with the associated response)
+    It's used to be able to correctly update the page counters at the bottom of the page,
+    to know at which page we are (e.g 2/4).
+    And it's used when refreshing the page, to ask again the current URL.
+    */
+    CustomJsonArrayRequest mCurrJsonArrayRequestAnswered;
 
     /* The following URLs are used by specific buttons, to move between pages  */
     /* First page URL retrieved from the Link section of the server response header */
-    private String mFirstPageUrlRequest;
+    String mFirstPageUrlRequest;
     /* Previous page URL retrieved from the Link section of the server response header */
-    private String mPrevPageUrlRequest;
+    String mPrevPageUrlRequest;
     /* Next page URL retrieved from the Link section of the server response header */
-    private String mNextPageUrlRequest;
+    String mNextPageUrlRequest;
     /* Last page URL retrieved from the Link section of the server response header */
-    private String mLastPageUrlRequest;
+    String mLastPageUrlRequest;
 
     /* Total number of items of a given type (authors, posts, comments) present on the Server DB */
-    protected String mTotalNumberOfItemsInServer;
+    String mTotalNumberOfItemsInServer;
 
     /* True when we are not able to retrieve data from server */
-    private boolean mIsInfoUnavailable;
+    boolean mIsInfoUnavailable;
 
     /*
     When setting the Web Server address in the User Settings, we could use HTTP or HTTPS.
@@ -125,40 +145,48 @@ public abstract class ActivityBase extends AppCompatActivity {
     (e.g. I use HTTPS in the fist URL sent to the Server and I get an answer with URLS pages
     containing HTTP: If I use them to ask a new page it won't work. HTTP has to be changed to HTTPS.
     */
-    private boolean mIsHttpsConnection;
+    boolean mIsHttpsConnection;
 
     /*
-    A Custom JsonArrayRequest to be able to
+    A Custom JsonArrayRequest to be able to:
     1) Extract the needed information from the Header Response, which is not retrieved by default.
     2) Use a custom caching mechanism, since the default implementation is completely relying on
     what the sever returns in the HTTP cache headers of the response. Those information could also
-    be not present in the response. So we have no control on the caching mechanism.
+    be not present in the response. So in this case we have no control on the caching mechanism.
     */
-    private class CustomJsonArrayRequest extends JsonArrayRequest {
-
-        private final String mRequestedUrl;
+    class CustomJsonArrayRequest extends JsonArrayRequest {
 
         public CustomJsonArrayRequest(String url, Response.Listener
                 <JSONArray> listener, Response.ErrorListener errorListener) {
             super(url, listener, errorListener);
-            mRequestedUrl = url;
         }
 
-        public CustomJsonArrayRequest(int method, String url, JSONArray jsonRequest,
+        CustomJsonArrayRequest(int method, String url, JSONArray jsonRequest,
                 Response.Listener<JSONArray> listener, Response.ErrorListener errorListener) {
             super(method, url, jsonRequest, listener, errorListener);
-            mRequestedUrl = url;
         }
 
+        /*
+        Callback for a given CustomJsonArrayRequest that has been answered by the Server.
+        Accessing the URL of the CustomJsonArrayRequest allow us to know which URL has been answered
+        */
         @Override
         protected Response<JSONArray> parseNetworkResponse(NetworkResponse response) {
             if (VDBG) Log.d(TAG, "parseNetworkResponse");
             try {
+                /* The CustomJsonArrayRequest itself represent the request that has been answered */
+                mCurrJsonArrayRequestAnswered = this;
+                /*
+                Extracting the useful information from the response, to update the UI buttons
+                with the correct URLs (to be able to go to first/prev/next/last page)
+                */
+                updatePaginationUrls(response);
+                /* Handling the caching mechanism for the URL related to the current response */
                 final String jsonStringData = new String(response.data,
                         HttpHeaderParser.parseCharset(response.headers, PROTOCOL_CHARSET));
-                computePageUrlRequests(response);
                 /* -1 means value not initialized (we fail to get it from SharedPreferences) */
                 if (mCacheHitTimePref != -1 && mCacheExpirationTimePref != -1) {
+                    /* Using a custom caching mechanism */
                     Cache.Entry cacheEntry = configureCustomCacheFromResponse(response);
                     return Response.success(new JSONArray(
                             jsonStringData), cacheEntry);
@@ -207,75 +235,6 @@ public abstract class ActivityBase extends AppCompatActivity {
             cacheEntry.responseHeaders = response.headers;
             return cacheEntry;
         }
-
-        /*
-        Retrieving the Link section from the Response Header header
-        Since we are using pagination when retrieving the info (authors, posts, comments...),
-        the Link is needed to retrieve the URL Requests to be used to move from the current page
-        to the first/previous/next/last thanks to specific buttons
-        */
-        private void computePageUrlRequests(NetworkResponse response) {
-            if (VDBG) Log.d(TAG, "computePageUrlRequests");
-            if(DBG) Log.d(TAG, "Full Header: " + response.headers);
-            /* The response header contains the Total Number of items stored in the Server */
-            mTotalNumberOfItemsInServer = response.headers.get(JsonParams.RESPONSE_TOTAL_COUNT);
-            if(DBG) Log.d(TAG, "Total Number of Items on Server: "
-                    + mTotalNumberOfItemsInServer);
-            /* Extracting the Link parameter from the Header */
-            String jsonStringHeaderLink = response.headers.get(JsonParams.RESPONSE_HEADER_LINK);
-            if(DBG) Log.d(TAG, "Header Link: " + jsonStringHeaderLink);
-            /*
-            The Header link contains a list of elements like that:
-            <http://sym-json-server.herokuapp.com/authors?_page=1>; rel="xxx"
-            We need to extract the pageLink (value between <> and the associated
-            pageRel (value in rel="xxx")
-            */
-            mCurrentPageUrlRequest = mRequestedUrl;
-            Pattern patternPageLink = Pattern.compile(JsonParams.RESPONSE_HEADER_LINK_REGEXP);
-            Matcher matcherPageLink = patternPageLink.matcher(jsonStringHeaderLink);
-            Pattern patternPageRel = Pattern.compile(JsonParams.RESPONSE_HEADER_REL_REGEXP);
-            Matcher matcherPageRel = patternPageRel.matcher(jsonStringHeaderLink);
-            /* For each PageLink we retrieve the associated PageRel (they are coupled together) */
-            while(matcherPageLink.find() && matcherPageRel.find()) {
-                String currPageLink = matcherPageLink.group(1);
-                String currPageRel = matcherPageRel.group(1);
-                if (VDBG) Log.d(TAG, "PageLink=" + currPageLink + ", PageRel=" + currPageRel);
-                if (currPageLink != null && currPageRel != null) {
-                    /* Double check that the PageLink is coherent with the connection type */
-                    if (currPageLink.startsWith(UrlParams.HTTP_HEADER) &&
-                            mIsHttpsConnection) {
-                        /* Replacing HTTP with HTTPS */
-                        currPageLink = UrlParams.HTTPS_HEADER + currPageLink.substring(
-                                UrlParams.HTTP_HEADER.length());
-                        if (VDBG) Log.d(TAG, "PageLink contains HTTP but connection" +
-                                " is HTTPS. URL changed to " + currPageLink);
-                    } else if (currPageLink.startsWith(UrlParams.HTTPS_HEADER) &&
-                            !mIsHttpsConnection) {
-                        /* Replacing HTTPS with HTTP */
-                        currPageLink = UrlParams.HTTP_HEADER + currPageLink.substring(
-                                UrlParams.HTTPS_HEADER.length());
-                        if (VDBG) Log.d(TAG, "PageLink contains HTTPS but connection" +
-                                " is HTTP, URL changed to " + currPageLink);
-                    }
-                    switch (currPageRel) {
-                        case JsonParams.RESPONSE_HEADER_REL_FIRST_PAGE:
-                            mFirstPageUrlRequest = currPageLink;
-                            break;
-                        case JsonParams.RESPONSE_HEADER_REL_PREV_PAGE:
-                            mPrevPageUrlRequest = currPageLink;
-                            break;
-                        case JsonParams.RESPONSE_HEADER_REL_NEXT_PAGE:
-                            mNextPageUrlRequest = currPageLink;
-                            break;
-                        case JsonParams.RESPONSE_HEADER_REL_LAST_PAGE:
-                            mLastPageUrlRequest = currPageLink;
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
-        }
     }
 
     /* Needed to listen for changes in the Settings */
@@ -305,40 +264,40 @@ public abstract class ActivityBase extends AppCompatActivity {
     2) Content Section(different for each)
     3) Pagination Buttons Section(same for all)
     */
-    protected abstract int getContentView();
+    abstract int getContentView();
 
     /*
     Each Activity knows what to do when an item (author, post...) is selected (clicked) "
     */
-    protected abstract void handleItemClicked(int position);
+    abstract void handleItemClicked(int position);
 
     /*
     Each Activity knows how to handle the Server response
     */
-    protected abstract void handleServerResponse(JSONArray response);
+    abstract void handleServerResponse(JSONArray response);
 
     /* Each activity knows how to handle the change of those SharedPreferences */
-    protected abstract void handleSubPageChanged();
-    protected abstract void handleMaxNumItemsPerPageChanged();
-    protected abstract void handleOrderingMethodChanged();
+    abstract void handleSubPageChanged();
+    abstract void handleMaxNumItemsPerPageChanged();
+    abstract void handleOrderingMethodChanged();
 
     /*
     Those parameters are handled at the same way, but each Activity has its own key
     and default value to be considered from SharedPreferences
     */
-    protected abstract String getSubPagePrefKey();
-    protected abstract String getSubPagePrefDefault();
-    protected abstract String getMaxNumPerPagePrefKey();
-    protected abstract String getMaxNumPerPagePrefDefault();
-    protected abstract String getOrderingMethodPrefKey();
-    protected abstract String getOrderingMethodPrefDefault();
+    abstract String getSubPagePrefKey();
+    abstract String getSubPagePrefDefault();
+    abstract String getMaxNumPerPagePrefKey();
+    abstract String getMaxNumPerPagePrefDefault();
+    abstract String getOrderingMethodPrefKey();
+    abstract String getOrderingMethodPrefDefault();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate");
-        mLastUrlRequestSentToServer = null;
-        mCurrentPageUrlRequest = null;
+        mLastJsonArrayRequestSent = null;
+        mCurrJsonArrayRequestAnswered = null;
         mFirstPageUrlRequest = null;
         mPrevPageUrlRequest = null;
         mNextPageUrlRequest = null;
@@ -453,6 +412,75 @@ public abstract class ActivityBase extends AppCompatActivity {
         return true;
     }
 
+    /*
+    Handles the response from the Web Server related to a specific request, retrieving
+    the Link section from the Response Header to be able to correctly handle the pagination.
+    In fact, since we are using pagination when retrieving the info (authors, posts, comments...),
+    the Link is needed to retrieve the URL Requests to be used to move from the current page
+    to the first/previous/next/last thanks to specific buttons
+    */
+    void updatePaginationUrls(NetworkResponse response) {
+        if (VDBG) Log.d(TAG, "updatePaginationUrls");
+        if (DBG) Log.d(TAG, "Full Header: " + response.headers);
+        /* The response header contains the Total Number of items stored in the Server */
+        mTotalNumberOfItemsInServer = response.headers.get(JsonParams.RESPONSE_TOTAL_COUNT);
+        if (DBG) Log.d(TAG, "Total Number of Items on Server: "
+                + mTotalNumberOfItemsInServer);
+        /* Extracting the Link parameter from the Header */
+        String jsonStringHeaderLink = response.headers.get(JsonParams.RESPONSE_HEADER_LINK);
+        if (DBG) Log.d(TAG, "Header Link: " + jsonStringHeaderLink);
+        /*
+        The Header link contains a list of elements like that:
+        <http://sym-json-server.herokuapp.com/authors?_page=1>; rel="xxx"
+        We need to extract the pageLink (value between <> and the associated
+        pageRel (value in rel="xxx")
+        */
+        Pattern patternPageLink = Pattern.compile(JsonParams.RESPONSE_HEADER_LINK_REGEXP);
+        Matcher matcherPageLink = patternPageLink.matcher(jsonStringHeaderLink);
+        Pattern patternPageRel = Pattern.compile(JsonParams.RESPONSE_HEADER_REL_REGEXP);
+        Matcher matcherPageRel = patternPageRel.matcher(jsonStringHeaderLink);
+        /* For each PageLink we retrieve the associated PageRel (they are coupled together) */
+        while (matcherPageLink.find() && matcherPageRel.find()) {
+            String currPageLink = matcherPageLink.group(1);
+            String currPageRel = matcherPageRel.group(1);
+            if (VDBG) Log.d(TAG, "PageLink=" + currPageLink + ", PageRel=" + currPageRel);
+            if (currPageLink != null && currPageRel != null) {
+                /* Double check that the PageLink is coherent with the connection type */
+                if (currPageLink.startsWith(UrlParams.HTTP_HEADER) &&
+                        mIsHttpsConnection) {
+                    /* Replacing HTTP with HTTPS */
+                    currPageLink = UrlParams.HTTPS_HEADER + currPageLink.substring(
+                            UrlParams.HTTP_HEADER.length());
+                    if (VDBG) Log.d(TAG, "PageLink contains HTTP but connection" +
+                            " is HTTPS. URL changed to " + currPageLink);
+                } else if (currPageLink.startsWith(UrlParams.HTTPS_HEADER) &&
+                        !mIsHttpsConnection) {
+                    /* Replacing HTTPS with HTTP */
+                    currPageLink = UrlParams.HTTP_HEADER + currPageLink.substring(
+                            UrlParams.HTTPS_HEADER.length());
+                    if (VDBG) Log.d(TAG, "PageLink contains HTTPS but connection" +
+                            " is HTTP, URL changed to " + currPageLink);
+                }
+                switch (currPageRel) {
+                    case JsonParams.RESPONSE_HEADER_REL_FIRST_PAGE:
+                        mFirstPageUrlRequest = currPageLink;
+                        break;
+                    case JsonParams.RESPONSE_HEADER_REL_PREV_PAGE:
+                        mPrevPageUrlRequest = currPageLink;
+                        break;
+                    case JsonParams.RESPONSE_HEADER_REL_NEXT_PAGE:
+                        mNextPageUrlRequest = currPageLink;
+                        break;
+                    case JsonParams.RESPONSE_HEADER_REL_LAST_PAGE:
+                        mLastPageUrlRequest = currPageLink;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
 
     /*
     This method is called to retrieve the list of items to be displayed on the current activity.
@@ -460,7 +488,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     in the CommentsActivity.
     This is done when clicking on First/Prev/Next/Last pages or when clicking on Refresh button.
     */
-    protected void retrieveItemsList(String url) {
+    void retrieveItemsList(String url) {
         if (VDBG) Log.d(TAG, "retrieveItemsList URL=" + url);
         if (url != null && !url.isEmpty()) {
             if (VDBG) Log.d(TAG, "URL=" + url);
@@ -473,13 +501,12 @@ public abstract class ActivityBase extends AppCompatActivity {
             */
             NetworkRequestUtils.getInstance(
                     getApplicationContext()).cancelAllRequests(getLocalClassName());
-            /* Updating the old URL Request with the new one */
-            mLastUrlRequestSentToServer = url;
+            /* Resetting the current answer. It will be set once we will receive the new answer */
+            mCurrJsonArrayRequestAnswered = null;
             /*
-            Those values will be set once we receive the answer from the Server
+            Those values will be set once we receive the answer from the Server.
             They are part of the response header
             */
-            mCurrentPageUrlRequest = null;
             mFirstPageUrlRequest = null;
             mPrevPageUrlRequest = null;
             mNextPageUrlRequest = null;
@@ -500,17 +527,20 @@ public abstract class ActivityBase extends AppCompatActivity {
                     handleServerErrorResponse(error);
                 }
             });
-            /* Add the request to the RequestQueue. The request is tagged with the Class Name */
+            /*
+            Add the request to the RequestQueue. The request is tagged with the Class Name
+            Updating the old Request with the new one
+            */
             jsonArrayRequest.setTag(getLocalClassName());
-            NetworkRequestUtils.getInstance(getApplicationContext()).addToRequestQueue(
-                    jsonArrayRequest);
+            mLastJsonArrayRequestSent = (CustomJsonArrayRequest) NetworkRequestUtils.getInstance(
+                    getApplicationContext()).addToRequestQueue(jsonArrayRequest);
             mProgressBar.setVisibility(View.VISIBLE);
         } else {
             Log.e(TAG, "URL null or empty");
         }
     }
 
-    protected void handleServerResponse(boolean isDataRetrievalSuccess) {
+    void handleServerResponse(boolean isDataRetrievalSuccess) {
         if (VDBG) Log.d(TAG, "handleServerResponse Success=" + isDataRetrievalSuccess);
         mIsInfoUnavailable = !isDataRetrievalSuccess;
         if (isDataRetrievalSuccess) {
@@ -523,7 +553,7 @@ public abstract class ActivityBase extends AppCompatActivity {
         }
     }
 
-    private void handleServerErrorResponse(VolleyError error) {
+    void handleServerErrorResponse(VolleyError error) {
         if (VDBG) Log.d(TAG, "handleServerErrorResponse");
         mIsInfoUnavailable = true;
         mTotalNumberOfItemsInServer = null;
@@ -534,7 +564,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     }
 
     /* To change the date format coming from the Web Server to the specific format for our UI */
-    protected String formatDate(String date) {
+    String formatDate(String date) {
         if (VDBG) Log.d(TAG, "formatDate");
         String formattedDate = null;
         if (date != null) {
@@ -583,7 +613,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     }
 
     /* The image will be retrieved from server if not available on cache */
-    protected void setImage(String url, NetworkImageView networkImageView) {
+    void setImage(String url, NetworkImageView networkImageView) {
         if (VDBG) Log.d(TAG, "setImage URL=" + url);
         if (url != null && !url.isEmpty()) {
             if (networkImageView != null) {
@@ -650,20 +680,25 @@ public abstract class ActivityBase extends AppCompatActivity {
     }
 
     /*
+    This method update the page number (e.g. Page 1/2) at the bottom of the Table (List View).
     Note that lastPageRequestUrl=null occurs when we have only 1 page of results from server, and
     so the server doesn't send the information about the last page, since equal to current page.
-    Instead currentPageRequestUrl cannot be null, unless a problem occurred
+    Instead mCurrJsonArrayRequestAnswered cannot be null (since we are here because we got an
+    answer from the server), unless there are issue in the code itself
     */
     private void updatePageCounters() {
-        if (VDBG) Log.d(TAG, "updatePageCounters currPageUrl=" + mCurrentPageUrlRequest +
-                ", lastPageUrl=" + mLastPageUrlRequest);
         String currPageNum = null;
         String lastPageNum = null;
-        if (mCurrentPageUrlRequest!= null) {
+        if (mCurrJsonArrayRequestAnswered != null &&
+                mCurrJsonArrayRequestAnswered.getUrl() != null) {
+            if (VDBG) Log.d(TAG, "updatePageCounters currPageUrl=" +
+                    mCurrJsonArrayRequestAnswered.getUrl() +
+                    ", lastPageUrl=" + mLastPageUrlRequest);
             /* Extracting the page number from the URL */
             Pattern patternPageNum = Pattern.compile(JsonParams.RESPONSE_HEADER_PAGE_NUM_REGEXP);
             /* Current Page Number */
-            Matcher matcherCurrPageNum = patternPageNum.matcher(mCurrentPageUrlRequest);
+            Matcher matcherCurrPageNum = patternPageNum.matcher(
+                    mCurrJsonArrayRequestAnswered.getUrl());
             if (matcherCurrPageNum.find()) {
                 currPageNum = matcherCurrPageNum.group(1);
                 /* Last Page Number */
@@ -699,7 +734,8 @@ public abstract class ActivityBase extends AppCompatActivity {
         if (VDBG) Log.d(TAG, "First Page Request=" + mFirstPageUrlRequest);
         /* Avoiding to display the First Page Button if we are already at the First Page */
         mFirstPageButton.setEnabled(!forceDisabling && mFirstPageUrlRequest != null &&
-                !mCurrentPageUrlRequest.equals(mFirstPageUrlRequest));
+                mCurrJsonArrayRequestAnswered != null &&
+                !mFirstPageUrlRequest.equals(mCurrJsonArrayRequestAnswered.getUrl()));
         if (VDBG) Log.d(TAG, "Prev Page Request=" + mPrevPageUrlRequest);
         mPrevPageButton.setEnabled(!forceDisabling && mPrevPageUrlRequest != null);
         if (VDBG) Log.d(TAG, "Next Page Request=" + mNextPageUrlRequest);
@@ -707,7 +743,8 @@ public abstract class ActivityBase extends AppCompatActivity {
         if (VDBG) Log.d(TAG, "Last Page Request=" + mLastPageUrlRequest);
         /* Avoiding to display the Last Page Button if we are already at the Last Page */
         mLastPageButton.setEnabled(!forceDisabling && mLastPageUrlRequest != null &&
-                !mCurrentPageUrlRequest.equals(mLastPageUrlRequest));
+                mCurrJsonArrayRequestAnswered != null &&
+                !mLastPageUrlRequest.equals(mCurrJsonArrayRequestAnswered.getUrl()));
     }
 
     private void refresh() {
@@ -715,23 +752,31 @@ public abstract class ActivityBase extends AppCompatActivity {
         /* First of all clearing the cache */
         NetworkRequestUtils.getInstance(getApplicationContext()).clearCache();
         /*
-        mCurrentPageUrlRequest is the current page url returned by the Web Server.
+        mCurrJsonArrayRequestAnswered is the current request that has been answered the Web Server,
+        related to specific URL we have asked.
         It won't be set in case we didn't succeed to contact the Server.
         */
-        if (mCurrentPageUrlRequest != null && !mCurrentPageUrlRequest.isEmpty()) {
+        if (mCurrJsonArrayRequestAnswered != null &&
+                mCurrJsonArrayRequestAnswered.getUrl() != null &&
+                !mCurrJsonArrayRequestAnswered.getUrl().isEmpty()) {
             if (VDBG) Log.d(TAG, "using mCurrentPageUrlRequest");
-            retrieveItemsList(mCurrentPageUrlRequest);
+            retrieveItemsList(mCurrJsonArrayRequestAnswered.getUrl());
         /*
-        mLastUrlRequestSentToServer is the last request sent to the Server (not answered)
+        If we are at this point, mLastJsonArrayRequestSent represent the last request
+        sent to the Server that has not been answered (otherwise the previous "if" will be true).
         Retrying again to contact the Server.
         */
+        } else if (mLastJsonArrayRequestSent != null &&
+                mLastJsonArrayRequestSent.getUrl() != null &&
+                !mLastJsonArrayRequestSent.getUrl().isEmpty()) {
+            if (VDBG) Log.d(TAG, "using mLastJsonArrayRequestSent");
+            retrieveItemsList(mLastJsonArrayRequestSent.getUrl());
         } else {
-            if (VDBG) Log.d(TAG, "using mLastUrlRequestSentToServer");
-            retrieveItemsList(mLastUrlRequestSentToServer);
+            Log.e(TAG, "unable to retrieve any URL to refresh");
         }
     }
 
-    protected void exitApplication() {
+    private void exitApplication() {
         if (VDBG) Log.d(TAG, "exitApplication Current Class=" + getLocalClassName());
         if (this instanceof MainActivity) {
             finish();
@@ -780,7 +825,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     }
 
     /* Retrieving all the sharedPreferences synchronously  */
-    protected void retrieveSettings() {
+    private void retrieveSettings() {
         if (VDBG) Log.d(TAG, "retrieveSettings");
         for (String key : SettingsActivity.PREFERENCES_LIST_KEYS) {
             retrieveSetting(key);
@@ -791,7 +836,7 @@ public abstract class ActivityBase extends AppCompatActivity {
     All the user inputs are validated -> once we succeed on retrieving the sharedPreference
     (value != null), its value is surely valid
     */
-    protected boolean retrieveSetting(String key) {
+    private boolean retrieveSetting(String key) {
         boolean isValueChanged = false;
         if (VDBG) Log.d(TAG, "KEY_RETRIEVED=" + key);
         if (key != null) {
@@ -916,7 +961,7 @@ public abstract class ActivityBase extends AppCompatActivity {
         return isValueChanged;
     }
 
-    protected void handleSettingChange(String key) {
+    private void handleSettingChange(String key) {
         if (VDBG) Log.d(TAG, "handleSettingChange key=" + key);
         /* Retrieving the new value */
         boolean isValueChanged = retrieveSetting(key);

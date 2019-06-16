@@ -60,7 +60,7 @@ public class NetworkRequestUtils {
         return INSTANCE;
     }
 
-    private RequestQueue getRequestQueue() {
+    public RequestQueue getRequestQueue() {
         if (VDBG) Log.d(TAG, "getRequestQueue");
         if (mRequestQueue == null) {
             mRequestQueue = Volley.newRequestQueue(mContext.getApplicationContext());
@@ -68,9 +68,9 @@ public class NetworkRequestUtils {
         return mRequestQueue;
     }
 
-    public <T> void addToRequestQueue(Request<T> req) {
+    public <T> Request<T> addToRequestQueue(Request<T> req) {
         if (VDBG) Log.d(TAG, "addToRequestQueue");
-        getRequestQueue().add(req);
+        return getRequestQueue().add(req);
     }
 
     public void cancelAllRequests(String tag) {

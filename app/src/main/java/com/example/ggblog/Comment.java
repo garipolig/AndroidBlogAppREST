@@ -152,8 +152,12 @@ public class Comment implements Parcelable {
 
     /* All the information of the Comment are mandatory except the AvatarUrl */
     public boolean isValid() {
-        return (mId != null && mDate != null && mBody != null && mUserName != null &&
-                mEmail != null && mPost != null && mPost.isValid());
+        return (mId != null && !mId.isEmpty() &&
+                mDate != null && !mDate.isEmpty() &&
+                mBody != null && !mBody.isEmpty() &&
+                mUserName != null && !mUserName.isEmpty() &&
+                mEmail != null && !mEmail.isEmpty() &&
+                mPost != null && mPost.isValid());
     }
 
     @Override

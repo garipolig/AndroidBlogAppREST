@@ -1,7 +1,7 @@
 package com.example.ggblog;
 
 /* Parameters/attributes present in the JSON response sent by the Web Server */
-public final class JsonParams {
+final class JsonParams {
 
     /* E.g. Link=<http://sym-json-server.herokuapp.com/authors?_page=1>; rel="first" */
     public static final String RESPONSE_HEADER_LINK = "Link";

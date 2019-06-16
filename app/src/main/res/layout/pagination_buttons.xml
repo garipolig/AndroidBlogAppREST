@@ -31,7 +31,8 @@
                 android:layout_weight="1"
                 android:layout_column="0"
                 android:text="@string/button_first_page"
-                style="?android:attr/borderlessButtonStyle"/>
+                style="?android:attr/borderlessButtonStyle"
+                android:enabled="false"/>
 
             <Button
                 android:id="@+id/buttonPrevPage"
@@ -40,7 +41,8 @@
                 android:layout_weight="1"
                 android:layout_column="1"
                 android:text="@string/button_prev_page"
-                style="?android:attr/borderlessButtonStyle"/>
+                style="?android:attr/borderlessButtonStyle"
+                android:enabled="false"/>
 
             <Button
                 android:id="@+id/buttonNextPage"
@@ -49,7 +51,8 @@
                 android:layout_weight="1"
                 android:layout_column="2"
                 android:text="@string/button_next_page"
-                style="?android:attr/borderlessButtonStyle"/>
+                style="?android:attr/borderlessButtonStyle"
+                android:enabled="false"/>
 
             <Button
                 android:id="@+id/buttonLastPage"
@@ -58,7 +61,8 @@
                 android:layout_weight="1"
                 android:layout_column="3"
                 android:text="@string/button_last_page"
-                style="?android:attr/borderlessButtonStyle"/>
+                style="?android:attr/borderlessButtonStyle"
+                android:enabled="false"/>
 
         </TableRow>
 

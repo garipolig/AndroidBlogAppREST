@@ -30,11 +30,11 @@ public class MainActivity extends ActivityBase {
     Needed to fill the table (ListView) of Authors, using the specific row layout for the Author
     (see author_row.xml)
     */
-    private class CustomAdapter extends ArrayAdapter<Author> {
+    class CustomAdapter extends ArrayAdapter<Author> {
         private final Context mContext;
         private final int mLayoutResourceId;
 
-        public CustomAdapter(Context context, int resource, List<Author> authors) {
+        CustomAdapter(Context context, int resource, List<Author> authors) {
             super(context, resource, authors);
             if(VDBG) Log.d(TAG, "creating CustomAdapter");
             mContext = context;
@@ -76,7 +76,7 @@ public class MainActivity extends ActivityBase {
         */
         if (intent != null && getIntent().getBooleanExtra(EXTRA_EXIT, false)) {
             if (VDBG) Log.d(TAG, "Received request to close the application");
-            exitApplication();
+            finish();
             return;
         }
         /*
@@ -89,11 +89,11 @@ public class MainActivity extends ActivityBase {
         retrieveInitialDataFromServer();
     }
 
-    protected int getContentView() {
+    int getContentView() {
         return R.layout.activity_main;
     }
 
-    protected void handleItemClicked(int position) {
+    void handleItemClicked(int position) {
         if (VDBG) Log.d(TAG, "handleItemClicked position=" + position);
         /*
         Cancel any ongoing requests made by this Activity, since we are switching to a new one.
@@ -122,7 +122,7 @@ public class MainActivity extends ActivityBase {
     }
 
     /* Information to be displayed on the Table (Authors List) */
-    protected ArrayList<Author> getInfoToDisplayOnTable(JSONArray jsonArray) {
+    ArrayList<Author> getInfoToDisplayOnTable(JSONArray jsonArray) {
         if (VDBG) Log.d(TAG, "getInfoToDisplayOnTable");
         ArrayList<Author> itemsList = new ArrayList<>();
         if (jsonArray != null && jsonArray.length() > 0) {
@@ -151,24 +151,24 @@ public class MainActivity extends ActivityBase {
     }
 
     /* A new URL Request will be used starting from now -> Asking initial data to server */
-    protected void handleSubPageChanged() {
+    void handleSubPageChanged() {
         if (VDBG) Log.d(TAG, "handleSubPageChanged");
         retrieveInitialDataFromServer();
     }
 
     /* A new URL Request will be used starting from now -> Asking initial data to server */
-    protected void handleMaxNumItemsPerPageChanged() {
+    void handleMaxNumItemsPerPageChanged() {
         if (VDBG) Log.d(TAG, "handleMaxNumItemsPerPageChanged");
         retrieveInitialDataFromServer();
     }
 
     /* A new URL Request will be used starting from now -> Asking initial data to server */
-    protected void handleOrderingMethodChanged() {
+    void handleOrderingMethodChanged() {
         if (VDBG) Log.d(TAG, "handleOrderingMethodChanged");
         retrieveInitialDataFromServer();
     }
 
-    protected void handleServerResponse(JSONArray response) {
+    void handleServerResponse(JSONArray response) {
         if (VDBG) Log.d(TAG, "displayServerResponse");
         boolean isDataRetrievalSuccess = false;
         ArrayList<Author> infoToDisplay = getInfoToDisplayOnTable(response);
@@ -216,27 +216,27 @@ public class MainActivity extends ActivityBase {
         mItemsListContentListView.setAdapter(listAdapter);
     }
 
-    protected String getSubPagePrefKey() {
+    String getSubPagePrefKey() {
         return SettingsActivity.PREF_AUTHORS_SUB_PAGE_KEY;
     }
 
-    protected String getSubPagePrefDefault() {
+    String getSubPagePrefDefault() {
         return SettingsActivity.PREF_AUTHORS_SUB_PAGE_DEFAULT;
     }
 
-    protected String getMaxNumPerPagePrefKey() {
+    String getMaxNumPerPagePrefKey() {
         return SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY;
     }
 
-    protected String getMaxNumPerPagePrefDefault() {
+    String getMaxNumPerPagePrefDefault() {
         return SettingsActivity.PREF_MAX_NUM_AUTHORS_PER_PAGE_DEFAULT;
     }
 
-    protected String getOrderingMethodPrefKey() {
+    String getOrderingMethodPrefKey() {
         return SettingsActivity.PREF_AUTHORS_ORDERING_METHOD_KEY;
     }
 
-    protected String getOrderingMethodPrefDefault() {
+    String getOrderingMethodPrefDefault() {
         return SettingsActivity.PREF_AUTHORS_ORDERING_METHOD_DEFAULT;
     }
 }

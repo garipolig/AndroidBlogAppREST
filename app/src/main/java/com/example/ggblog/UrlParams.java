@@ -3,7 +3,7 @@ package com.example.ggblog;
 import android.util.Log;
 
 /* Parameters used when interrogating the Server and useful methods to handle the URLs */
-public final class UrlParams {
+final class UrlParams {
 
     private static final String TAG = "UrlParams";
     private static final boolean DBG = ActivityBase.DBG;

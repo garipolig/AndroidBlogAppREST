@@ -39,11 +39,11 @@ public class PostsActivity extends ActivityBase {
     Needed to fill the table (ListView) of Posts, using the specific row layout for the Post
     (see post_row.xml)
     */
-    private class CustomAdapter extends ArrayAdapter<Post> {
+    class CustomAdapter extends ArrayAdapter<Post> {
         private final Context mContext;
         private final int mLayoutResourceId;
 
-        public CustomAdapter(Context context, int resource, List<Post> posts) {
+        CustomAdapter(Context context, int resource, List<Post> posts) {
             super(context, resource, posts);
             if(VDBG) Log.d(TAG, "creating CustomAdapter");
             mContext = context;
@@ -127,11 +127,11 @@ public class PostsActivity extends ActivityBase {
         }
     }
 
-    protected int getContentView() {
+    int getContentView() {
         return R.layout.activity_posts;
     }
 
-    protected void handleItemClicked(int position) {
+    void handleItemClicked(int position) {
         if (VDBG) Log.d(TAG, "handleItemClicked position=" + position);
         /*
         Cancel any ongoing requests made by this Activity, since we are switching to a new one.
@@ -160,7 +160,7 @@ public class PostsActivity extends ActivityBase {
     }
 
     /* Information to be displayed on the Table (Posts List) */
-    protected ArrayList<Post> getInfoToDisplayOnTable(JSONArray jsonArray) {
+    ArrayList<Post> getInfoToDisplayOnTable(JSONArray jsonArray) {
         if (VDBG) Log.d(TAG, "getInfoToDisplayOnTable");
         ArrayList<Post> itemsList = new ArrayList<>();
         if (jsonArray != null && jsonArray.length() > 0) {
@@ -191,24 +191,24 @@ public class PostsActivity extends ActivityBase {
     }
 
     /* A new URL Request will be used starting from now -> Asking initial data to server */
-    protected void handleSubPageChanged() {
+    void handleSubPageChanged() {
         if (VDBG) Log.d(TAG, "handleSubPageChanged");
         retrieveInitialDataFromServer(mCurrentAuthor);
     }
 
     /* A new URL Request will be used starting from now -> Asking initial data to server */
-    protected void handleMaxNumItemsPerPageChanged() {
+    void handleMaxNumItemsPerPageChanged() {
         if (VDBG) Log.d(TAG, "handleMaxNumItemsPerPageChanged");
         retrieveInitialDataFromServer(mCurrentAuthor);
     }
 
     /* A new URL Request will be used starting from now -> Asking initial data to server */
-    protected void handleOrderingMethodChanged() {
+    void handleOrderingMethodChanged() {
         if (VDBG) Log.d(TAG, "handleOrderingMethodChanged");
         retrieveInitialDataFromServer(mCurrentAuthor);
     }
 
-    protected void handleServerResponse(JSONArray response) {
+    void handleServerResponse(JSONArray response) {
         if (VDBG) Log.d(TAG, "displayServerResponse");
         boolean isDataRetrievalSuccess = false;
         ArrayList<Post> infoToDisplay = getInfoToDisplayOnTable(response);
@@ -301,27 +301,27 @@ public class PostsActivity extends ActivityBase {
         }
     }
 
-    protected String getSubPagePrefKey() {
+    String getSubPagePrefKey() {
         return SettingsActivity.PREF_POSTS_SUB_PAGE_KEY;
     }
 
-    protected String getSubPagePrefDefault() {
+    String getSubPagePrefDefault() {
         return SettingsActivity.PREF_POSTS_SUB_PAGE_DEFAULT;
     }
 
-    protected String getMaxNumPerPagePrefKey() {
+    String getMaxNumPerPagePrefKey() {
         return SettingsActivity.PREF_MAX_NUM_POSTS_PER_PAGE_KEY;
     }
 
-    protected String getMaxNumPerPagePrefDefault() {
+    String getMaxNumPerPagePrefDefault() {
         return SettingsActivity.PREF_MAX_NUM_POSTS_PER_PAGE_DEFAULT;
     }
 
-    protected String getOrderingMethodPrefKey() {
+    String getOrderingMethodPrefKey() {
         return SettingsActivity.PREF_POSTS_ORDERING_METHOD_KEY;
     }
 
-    protected String getOrderingMethodPrefDefault() {
+    String getOrderingMethodPrefDefault() {
         return SettingsActivity.PREF_POSTS_ORDERING_METHOD_DEFAULT;
     }
 }

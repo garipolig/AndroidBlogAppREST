@@ -35,11 +35,11 @@ public class CommentsActivity extends ActivityBase {
     Needed to fill the table (ListView) of Comments, using the specific row layout for the Comment
     (see comment_row.xml)
     */
-    private class CustomAdapter extends ArrayAdapter<Comment> {
+    class CustomAdapter extends ArrayAdapter<Comment> {
         private final Context mContext;
         private final int mLayoutResourceId;
 
-        public CustomAdapter(Context context, int resource, List<Comment> comments) {
+        CustomAdapter(Context context, int resource, List<Comment> comments) {
             super(context, resource, comments);
             if(VDBG) Log.d(TAG, "creating CustomAdapter");
             mContext = context;
@@ -148,7 +148,7 @@ public class CommentsActivity extends ActivityBase {
         }
     }
 
-    protected int getContentView() {
+    int getContentView() {
         return R.layout.activity_comments;
     }
 
@@ -156,7 +156,7 @@ public class CommentsActivity extends ActivityBase {
     Implementing this method because it's abstract in base class.
     But it will be never called, since the comments are not clickable.
     */
-    protected void handleItemClicked(int position) {
+    void handleItemClicked(int position) {
         if (VDBG) Log.d(TAG, "handleItemClicked position=" + position);
         Log.e(TAG, "This method shall not be called: onItemClickListener is disabled");
     }
@@ -178,7 +178,7 @@ public class CommentsActivity extends ActivityBase {
     }
 
     /* Information to be displayed on the Table (Comments List) */
-    protected ArrayList<Comment> getInfoToDisplayOnTable(JSONArray jsonArray) {
+    ArrayList<Comment> getInfoToDisplayOnTable(JSONArray jsonArray) {
         if (VDBG) Log.d(TAG, "getInfoToDisplayOnTable");
         ArrayList<Comment> itemsList = new ArrayList<>();
         if (jsonArray != null && jsonArray.length() > 0) {
@@ -209,24 +209,24 @@ public class CommentsActivity extends ActivityBase {
     }
 
     /* A new URL Request will be used starting from now -> Asking initial data to server */
-    protected void handleSubPageChanged() {
+    void handleSubPageChanged() {
         if (VDBG) Log.d(TAG, "handleSubPageChanged");
         retrieveInitialDataFromServer(mCurrentPost);
     }
 
     /* A new URL Request will be used starting from now -> Asking initial data to server */
-    protected void handleMaxNumItemsPerPageChanged() {
+    void handleMaxNumItemsPerPageChanged() {
         if (VDBG) Log.d(TAG, "handleMaxNumItemsPerPageChanged");
         retrieveInitialDataFromServer(mCurrentPost);
     }
 
     /* A new URL Request will be used starting from now -> Asking initial data to server */
-    protected void handleOrderingMethodChanged() {
+    void handleOrderingMethodChanged() {
         if (VDBG) Log.d(TAG, "handleOrderingMethodChanged");
         retrieveInitialDataFromServer(mCurrentPost);
     }
 
-    protected void handleServerResponse(JSONArray response) {
+    void handleServerResponse(JSONArray response) {
         if (VDBG) Log.d(TAG, "displayServerResponse");
         boolean isDataRetrievalSuccess = false;
         ArrayList<Comment> infoToDisplay = getInfoToDisplayOnTable(response);
@@ -279,27 +279,27 @@ public class CommentsActivity extends ActivityBase {
         mItemsListContentListView.setAdapter(listAdapter);
     }
 
-    protected String getSubPagePrefKey() {
+    String getSubPagePrefKey() {
         return SettingsActivity.PREF_COMMENTS_SUB_PAGE_KEY;
     }
 
-    protected String getSubPagePrefDefault() {
+    String getSubPagePrefDefault() {
         return SettingsActivity.PREF_COMMENTS_SUB_PAGE_DEFAULT;
     }
 
-    protected String getMaxNumPerPagePrefKey() {
+    String getMaxNumPerPagePrefKey() {
         return SettingsActivity.PREF_MAX_NUM_COMMENTS_PER_PAGE_KEY;
     }
 
-    protected String getMaxNumPerPagePrefDefault() {
+    String getMaxNumPerPagePrefDefault() {
         return SettingsActivity.PREF_MAX_NUM_COMMENTS_PER_PAGE_DEFAULT;
     }
 
-    protected String getOrderingMethodPrefKey() {
+    String getOrderingMethodPrefKey() {
         return SettingsActivity.PREF_COMMENTS_ORDERING_METHOD_KEY;
     }
 
-    protected String getOrderingMethodPrefDefault() {
+    String getOrderingMethodPrefDefault() {
         return SettingsActivity.PREF_COMMENTS_ORDERING_METHOD_DEFAULT;
     }
 }

@@ -167,7 +167,10 @@ public class Author implements Parcelable {
 
     /* All the information of the Author are mandatory except the AvatarUrl and the Address */
     public boolean isValid() {
-        return (mId != null && mName != null && mUserName != null && mEmail != null);
+        return (mId != null && !mId.isEmpty() &&
+                mName != null && !mName.isEmpty() &&
+                mUserName != null && !mUserName.isEmpty() &&
+                mEmail != null && !mEmail.isEmpty());
     }
 
     @Override

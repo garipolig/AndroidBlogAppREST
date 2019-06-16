@@ -136,7 +136,10 @@ public class Post implements Parcelable {
 
     /* All the information of the Post are mandatory except the ImageUrl*/
     public boolean isValid() {
-        return (mId != null && mDate != null && mTitle != null && mBody != null &&
+        return (mId != null && !mId.isEmpty() &&
+                mDate != null && !mDate.isEmpty() &&
+                mTitle != null && !mTitle.isEmpty() &&
+                mBody != null && !mBody.isEmpty() &&
                 mAuthor != null && mAuthor.isValid());
     }
 
