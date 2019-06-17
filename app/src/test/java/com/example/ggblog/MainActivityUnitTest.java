@@ -92,7 +92,7 @@ public class MainActivityUnitTest {
     }
 
     /*
-    Since we have not received any answer from Web Server, we have the current situation:
+    Since we have not received any answer from Web Server yet, we have the current situation:
     1) Layout correctly loaded with all the UI items not NULL
     2) Navigation Button disabled (to move to First/Prev/Next/Last pages)
     3) Table listing the authors empty
@@ -123,7 +123,7 @@ public class MainActivityUnitTest {
         /* Valid JsonArray */
         for (int i = 0; i< NUM_OF_AUTHORS; i++) {
             JSONObject jsonObjectAuthor = mValidJsonArray.getJSONObject(i);
-            /* Verifying we are able to build an valid Author  starting from a JSON Object */
+            /* Verifying we are able to build an valid Author starting from a JSON Object */
             Author currAuthor = new Author(jsonObjectAuthor);
             assertEquals(UrlParams.ID + i, currAuthor.getId());
             assertEquals(UrlParams.NAME + i, currAuthor.getName());
@@ -135,7 +135,7 @@ public class MainActivityUnitTest {
             assertTrue(currAuthor.isValid());
         }
         /* This is the actual method used in the MainActivity to parse the JSON Array */
-        ArrayList authorList = mMainActivity.getInfoToDisplayOnTable(mValidJsonArray);
+        ArrayList<Author> authorList = mMainActivity.getInfoToDisplayOnTable(mValidJsonArray);
         assertEquals(mValidJsonArray.length(), authorList.size());
     }
 
@@ -150,7 +150,7 @@ public class MainActivityUnitTest {
             assertFalse(currAuthor.isValid());
         }
         /* This is the actual method used in the MainActivity to parse the JSON Array */
-        ArrayList authorList = mMainActivity.getInfoToDisplayOnTable(mInvalidJsonArray);
+        ArrayList<Author> authorList = mMainActivity.getInfoToDisplayOnTable(mInvalidJsonArray);
         assertEquals(0, authorList.size());
     }
 

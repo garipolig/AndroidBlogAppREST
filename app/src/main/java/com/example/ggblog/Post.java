@@ -66,7 +66,12 @@ public class Post implements Parcelable {
                 mTitle = jsonObject.getString(UrlParams.TITLE);
                 mBody = jsonObject.getString(UrlParams.BODY);
                 mImageUrl = jsonObject.getString(UrlParams.IMAGE_URL);
-                /* The JSON object received today, related to a post, contains only the author Id */
+                /*
+                The JSON object received today, related to a post, contains only the author Id.
+                The rest of the information is filled by using the Author object passed through
+                intent by the MainActivity page.
+                A Post is not Valid without an associated valid Author.
+                */
                 mAuthor = new Author();
                 mAuthor.setId(jsonObject.getString(UrlParams.AUTHOR_ID));
             } catch (JSONException e) {

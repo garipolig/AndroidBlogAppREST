@@ -71,8 +71,10 @@ public class Comment implements Parcelable {
                 mEmail = jsonObject.getString(UrlParams.EMAIL);
                 mAvatarUrl = jsonObject.getString(UrlParams.AVATAR_URL);
                 /*
-                The JSON object received today, related to a comment, contains only
-                the post Id
+                The JSON object received today, related to a comment, contains only the post Id.
+                The rest of the information is filled by using the Post object passed through
+                intent by the PostsActivity page.
+                A Comment is not Valid without an associated valid Post.
                 */
                 mPost = new Post();
                 mPost.setId(jsonObject.getString(UrlParams.POST_ID));

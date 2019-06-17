@@ -106,7 +106,7 @@ public class CommentsActivity extends ActivityBase {
             Intent intent = getIntent();
             if (intent != null) {
                 Post post = intent.getParcelableExtra(EXTRA_MESSAGE);
-                if (post != null) {
+                if (post != null && post.isValid()) {
                     if (VDBG) Log.d(TAG, "Post received=" + post);
                     /* Storing the post globally for future usages (by other methods) */
                     mCurrentPost = post;
@@ -138,7 +138,7 @@ public class CommentsActivity extends ActivityBase {
                     /* When activity is created, retrieve the Comments to show */
                     retrieveInitialDataFromServer(post);
                 } else {
-                    Log.e(TAG, "Post is NULL");
+                    Log.e(TAG, "Post is NULL or not valid");
                 }
             } else {
                 Log.e(TAG, "unable to retrieve the intent");
