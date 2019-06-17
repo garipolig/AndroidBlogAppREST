@@ -75,6 +75,10 @@ public class MainActivityUnitTest {
     public void validateInitialSharedPreferences() {
         assertEquals(SettingsActivity.PREF_WEB_SERVER_URL_DEFAULT,
                 mMainActivity.mWebServerUrlPref);
+        assertEquals(Integer.parseInt(SettingsActivity.PREF_MAX_NUM_CONNECTION_RETRY_DEFAULT),
+                mMainActivity.mMaxNumConnectionRetryPref);
+        assertEquals(Integer.parseInt(SettingsActivity.PREF_SOCKET_TIMEOUT_DEFAULT),
+                mMainActivity.mSocketTimeoutPref);
         /* Value computed from the Web Server URL */
         assertTrue(mMainActivity.mIsHttpsConnection);
         assertEquals(SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_DEFAULT,
@@ -163,6 +167,13 @@ public class MainActivityUnitTest {
         /* The first request sent is stored in mLastJsonArrayRequestSent */
         assertEquals(INITIAL_REQUEST_TO_SERVER,
                 mMainActivity.mLastJsonArrayRequestSent.getUrl());
+        /*
+        Verify that the custom Retry Mechanism is used
+        We can only validate the Socket Timeout, since the Max Number of Retry is something
+        that is incremented at runtime, once a connection error occurs
+        */
+        assertEquals(Integer.parseInt(SettingsActivity.PREF_SOCKET_TIMEOUT_DEFAULT),
+                mMainActivity.mLastJsonArrayRequestSent.getRetryPolicy().getCurrentTimeout());
         /* The request is tagged with the Class Name */
         assertEquals(mMainActivity.getLocalClassName(),
                 mMainActivity.mLastJsonArrayRequestSent.getTag());

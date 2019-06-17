@@ -28,6 +28,7 @@ import androidx.appcompat.widget.Toolbar;
 
 import com.android.volley.AuthFailureError;
 import com.android.volley.Cache;
+import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.NetworkResponse;
 import com.android.volley.NoConnectionError;
 import com.android.volley.ParseError;
@@ -76,6 +77,12 @@ public abstract class ActivityBase extends AppCompatActivity {
     String mWebServerUrlPref;
     String mSubPagePref;
     boolean mIsAutoRetryWhenOnlineEnabledPref;
+    /*
+    Those preferences are used to have a custom retry mechanism for the Requests sent to the Server.
+    Using them as int, to avoid doing all the time the conversion from String.
+    */
+    int mMaxNumConnectionRetryPref;
+    int mSocketTimeoutPref;
     /*
     Keeping it as a String since we don't need to to any calculation with it.
     We just append it to the URL sent to the Web Server)
@@ -308,6 +315,8 @@ public abstract class ActivityBase extends AppCompatActivity {
         mWebServerUrlPref = null;
         mSubPagePref = null;
         mIsAutoRetryWhenOnlineEnabledPref = false;
+        mMaxNumConnectionRetryPref = -1;
+        mSocketTimeoutPref = -1;
         mCacheHitTimePref = -1;
         mCacheExpirationTimePref = -1;
         mMaxNumItemsPerPagePref = null;
@@ -544,6 +553,20 @@ public abstract class ActivityBase extends AppCompatActivity {
             Updating the old Request with the new one
             */
             jsonArrayRequest.setTag(getLocalClassName());
+            /*
+            Using a custom Retry Policy, according to the user settings (sharedPreferences).
+            Those values are surely valid, since the validation is done at the source (user input)
+            Value -1 means not initialized.
+            */
+            if (mMaxNumConnectionRetryPref != -1 && mSocketTimeoutPref != -1) {
+                if (DBG) Log.d(TAG, "Setting custom Retry Policy");
+                jsonArrayRequest.setRetryPolicy(new DefaultRetryPolicy(
+                        mSocketTimeoutPref,
+                        mMaxNumConnectionRetryPref,
+                        DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+            } else {
+                Log.e(TAG, "Unable to retrieve the Max Number of Retry or the Socket Timeout");
+            }
             mLastJsonArrayRequestSent = (CustomJsonArrayRequest) NetworkRequestUtils.getInstance(
                     getApplicationContext()).addToRequestQueue(jsonArrayRequest);
             mProgressBar.setVisibility(View.VISIBLE);
@@ -878,6 +901,36 @@ public abstract class ActivityBase extends AppCompatActivity {
                 } else {
                     Log.e(TAG, "Unable to retrieve the Web Server URL");
                 }
+            } else if (key.equals(SettingsActivity.PREF_MAX_NUM_CONNECTION_RETRY_KEY)) {
+                String maxNumConnectionRetry = mSharedPreferences.getString(
+                        SettingsActivity.PREF_MAX_NUM_CONNECTION_RETRY_KEY,
+                        SettingsActivity.PREF_MAX_NUM_CONNECTION_RETRY_DEFAULT);
+                if (maxNumConnectionRetry != null) {
+                    int maxNumConnectionRetryInt = Integer.parseInt(maxNumConnectionRetry);
+                    if (maxNumConnectionRetryInt != mMaxNumConnectionRetryPref) {
+                        mMaxNumConnectionRetryPref = maxNumConnectionRetryInt;
+                        isValueChanged = true;
+                        if (DBG) Log.d(TAG, "Max Num Connection Retry=" +
+                                mMaxNumConnectionRetryPref);
+                    }
+                } else {
+                    Log.e(TAG, "Unable to retrieve the Max Num Connection Retry");
+                }
+            } else if (key.equals(SettingsActivity.PREF_SOCKET_TIMEOUT_KEY)) {
+                String socketTimeout = mSharedPreferences.getString(
+                        SettingsActivity.PREF_SOCKET_TIMEOUT_KEY,
+                        SettingsActivity.PREF_SOCKET_TIMEOUT_DEFAULT);
+                if (socketTimeout != null) {
+                    int socketTimeoutInt = Integer.parseInt(socketTimeout);
+                    if (socketTimeoutInt != mSocketTimeoutPref) {
+                        mSocketTimeoutPref = socketTimeoutInt;
+                        isValueChanged = true;
+                        if (DBG) Log.d(TAG, "Socket Timeout=" +
+                                mSocketTimeoutPref);
+                    }
+                } else {
+                    Log.e(TAG, "Unable to retrieve the Socket Timeout");
+                }
             } else if (key.equals(SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_KEY)) {
                 boolean isAutoRetryWhenOnlineEnabled = mSharedPreferences.getBoolean(
                         SettingsActivity.PREF_AUTO_RETRY_WHEN_ONLINE_KEY,
@@ -1014,6 +1067,11 @@ public abstract class ActivityBase extends AppCompatActivity {
                 if (VDBG) Log.d(TAG, "Nothing to do for " + key);
             }
         } else {
+            /*
+            PREF_MAX_NUM_CONNECTION_RETRY_KEY and PREF_SOCKET_TIMEOUT_KEY belongs to this list.
+            No special action need to be taken at this point.
+            The new values will be taken into account at the next Request to the Server.
+            */
             if (VDBG) Log.d(TAG, "KEY_NOT_CHANGED=" + key + " -> Nothing to do");
         }
     }

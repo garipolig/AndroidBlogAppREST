@@ -8,6 +8,18 @@
             app:title="@string/web_server_url_title"
             app:useSimpleSummaryProvider="true"/>
 
+        <EditTextPreference
+            app:key="maxNumConnectionRetry"
+            app:defaultValue="1"
+            app:title="@string/max_num_connection_retry_title"
+            app:useSimpleSummaryProvider="true"/>
+
+        <EditTextPreference
+            app:key="socketTimeout"
+            app:defaultValue="3000"
+            app:title="@string/socket_timeout_title"
+            app:useSimpleSummaryProvider="true"/>
+
         <SwitchPreferenceCompat
             app:key="autoRetryWhenOnline"
             app:defaultValue="true"
