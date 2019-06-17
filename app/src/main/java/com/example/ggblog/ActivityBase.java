@@ -334,7 +334,15 @@ public abstract class ActivityBase extends AppCompatActivity {
                 public void onItemClick(AdapterView<?> parent, final View view,
                                         int position, long id) {
                     if (VDBG) Log.d(TAG, "onItemClick position=" + position + ", id=" + id);
-                    handleItemClicked(position);
+                    /*
+                    Also the line showing Error is clickable. Avoiding to do something if we are in
+                    this state, which means no info available in the table, except the error message
+                    */
+                    if (!mIsInfoUnavailable) {
+                        handleItemClicked(position);
+                    } else {
+                        if (VDBG) Log.d(TAG, "Info Unavailable. Nothing to do");
+                    }
                 }
             });
             mFirstPageButton.setOnClickListener(new OnClickListener() {

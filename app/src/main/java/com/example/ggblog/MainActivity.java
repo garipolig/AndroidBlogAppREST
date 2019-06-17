@@ -95,18 +95,21 @@ public class MainActivity extends ActivityBase {
 
     void handleItemClicked(int position) {
         if (VDBG) Log.d(TAG, "handleItemClicked position=" + position);
-        /*
-        Cancel any ongoing requests made by this Activity, since we are switching to a new one.
-        The Class Name is used as tag (the same used to trigger the request).
-        */
-        NetworkRequestUtils.getInstance(getApplicationContext()).cancelAllRequests(
-                getLocalClassName());
-        /* Author is surely valid, since we have checked before inserting it to the list  */
         Author author = getItemAtPosition(position);
-        Intent intent = new Intent(getApplicationContext(), PostsActivity.class);
-        if (VDBG) Log.d(TAG, "Author to send: " + author);
-        intent.putExtra(EXTRA_MESSAGE, author);
-        startActivity(intent);
+        if (author != null) {
+            /*
+            Cancel any ongoing requests made by this Activity, since we are switching to a new one.
+            The Class Name is used as tag (the same used to trigger the request).
+            */
+            NetworkRequestUtils.getInstance(getApplicationContext()).cancelAllRequests(
+                    getLocalClassName());
+            Intent intent = new Intent(getApplicationContext(), PostsActivity.class);
+            if (VDBG) Log.d(TAG, "Author to send: " + author);
+            intent.putExtra(EXTRA_MESSAGE, author);
+            startActivity(intent);
+        } else {
+            Log.e(TAG, "Author is NULL. Nothing to do");
+        }
     }
 
     private Author getItemAtPosition(int position) {

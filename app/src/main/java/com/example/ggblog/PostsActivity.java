@@ -134,18 +134,21 @@ public class PostsActivity extends ActivityBase {
 
     void handleItemClicked(int position) {
         if (VDBG) Log.d(TAG, "handleItemClicked position=" + position);
-        /*
-        Cancel any ongoing requests made by this Activity, since we are switching to a new one.
-        The Class Name is used as tag (the same used to trigger the request).
-        */
-        NetworkRequestUtils.getInstance(getApplicationContext()).cancelAllRequests(
-                getLocalClassName());
-        /* Post is surely valid, since we have checked before inserting it to the list  */
         Post post = getItemAtPosition(position);
-        Intent intent = new Intent(getApplicationContext(), CommentsActivity.class);
-        if (VDBG) Log.d(TAG, "Post to send: " + post);
-        intent.putExtra(EXTRA_MESSAGE, post);
-        startActivity(intent);
+        if (post != null) {
+            /*
+            Cancel any ongoing requests made by this Activity, since we are switching to a new one.
+            The Class Name is used as tag (the same used to trigger the request).
+            */
+            NetworkRequestUtils.getInstance(getApplicationContext()).cancelAllRequests(
+                    getLocalClassName());
+            Intent intent = new Intent(getApplicationContext(), CommentsActivity.class);
+            if (VDBG) Log.d(TAG, "Post to send: " + post);
+            intent.putExtra(EXTRA_MESSAGE, post);
+            startActivity(intent);
+        } else {
+            Log.e(TAG, "Post is NULL. Nothing to do");
+        }
     }
 
     private Post getItemAtPosition(int position) {
