@@ -1,7 +1,6 @@
 package com.example.ggblog;
 
 import android.content.Intent;
-import android.view.View;
 import android.widget.TextView;
 
 import androidx.test.core.app.ApplicationProvider;
@@ -103,7 +102,6 @@ public class PostsActivityUnitTest {
     Since we have not received any answer from Web Server yet, we have the current situation:
     1) Layout correctly loaded with all the UI items not NULL
     2) Navigation Button disabled (to move to First/Prev/Next/Last pages)
-    3) Table listing the posts empty
     */
     @Test
     public void validateInitialLayoutState() {
@@ -124,7 +122,6 @@ public class PostsActivityUnitTest {
         assertFalse(mPostsActivity.mPrevPageButton.isEnabled());
         assertFalse(mPostsActivity.mNextPageButton.isEnabled());
         assertFalse(mPostsActivity.mLastPageButton.isEnabled());
-        assertNull(mPostsActivity.mItemsListContentListView.getAdapter()); // Empty ListView
     }
 
     @Test
@@ -150,7 +147,7 @@ public class PostsActivityUnitTest {
             /* Verifying we are able to build an valid Post starting from a JSON Object */
             Post currPost = new Post(jsonObjectPost);
             assertEquals(UrlParams.ID + i, currPost.getId());
-            assertEquals(UrlParams.DATE + i, currPost.getDate());
+            assertEquals("2017-12-05T02:18:18.571Z", currPost.getDate());
             assertEquals(UrlParams.TITLE + i, currPost.getTitle());
             assertEquals(UrlParams.BODY + i, currPost.getBody());
             assertEquals(UrlParams.IMAGE_URL + i, currPost.getImageUrl());
@@ -159,9 +156,10 @@ public class PostsActivityUnitTest {
         }
         /*
         This is the actual method used in the PostsActivity to parse the JSON Array
-        It will also take care of settings the Current Author into the Posts objects
+        It will also take care of settings the Current Author into the Post objects
         */
-        ArrayList<Post> postList = mPostsActivity.getInfoToDisplayOnTable(mValidJsonArray);
+        ArrayList<Post> postList =
+                mPostsActivity.getInfoToDisplayOnTable(mValidJsonArray);
         assertEquals(mValidJsonArray.length(), postList.size());
         for (Post post : postList) {
             assertTrue(post.isValid());
@@ -178,21 +176,22 @@ public class PostsActivityUnitTest {
         }
         /*
         This is the actual method used in the PostsActivity to parse the JSON Array
-        It will also take care of settings the Current Author into the Posts objects
+        It will also take care of settings the Current Author into the Post objects
         */
-        ArrayList<Post> postList = mPostsActivity.getInfoToDisplayOnTable(mInvalidJsonArray);
+        ArrayList<Post> postList =
+                mPostsActivity.getInfoToDisplayOnTable(mInvalidJsonArray);
         assertEquals(0, postList.size());
     }
 
     /*
     Once activity starts, a first request is sent to the Web Server to retrieve the data
-    The URL is stored in mLastJsonArrayRequestSentToServer.
+    The URL is stored in mLastJsonArrayRequestSent.
     Starting from now, all the following requests will depend on the URL associated to each button
     (first/prev/next/last page), which are automatically computed at each Server Response
     */
     @Test
     public void validateFirstRequest() {
-        /* The first request sent is stored in mLastJsonArrayRequestSentToServer */
+        /* The first request sent is stored in mLastJsonArrayRequestSent */
         assertEquals(INITIAL_REQUEST_TO_SERVER,
                 mPostsActivity.mLastJsonArrayRequestSent.getUrl());
         /* The request is tagged with the Class Name */
@@ -202,12 +201,11 @@ public class PostsActivityUnitTest {
         assertNull(mPostsActivity.mPrevPageUrlRequest);
         assertNull(mPostsActivity.mNextPageUrlRequest);
         assertNull(mPostsActivity.mLastPageUrlRequest);
-        /* Pagination Buttons are disabled and Progress Bar visible, waiting for Server answer */
+        /* Pagination Buttons are disabled, waiting for Server answer */
         assertFalse(mPostsActivity.mFirstPageButton.isEnabled());
         assertFalse(mPostsActivity.mPrevPageButton.isEnabled());
         assertFalse(mPostsActivity.mNextPageButton.isEnabled());
         assertFalse(mPostsActivity.mLastPageButton.isEnabled());
-        assertEquals(View.VISIBLE, mPostsActivity.mProgressBar.getVisibility());
     }
 
     /*
@@ -215,7 +213,7 @@ public class PostsActivityUnitTest {
     in the MainActivityUnitTest
     */
 
-    /* Creates one array of @num JSON objects containing Post info */
+    /* Creates one array of NUM_OF_POSTS JSON objects containing Post info */
     private static void initializeJsonArray(boolean isValid) throws Exception {
         JSONArray jsonArray = new JSONArray();
         for (int i = 0; i< NUM_OF_POSTS; i++) {
@@ -223,16 +221,14 @@ public class PostsActivityUnitTest {
             JSONObject jsonObjectPost = new JSONObject();
             if (isValid) {
                 jsonObjectPost.put(UrlParams.ID, UrlParams.ID + i);
-                jsonObjectPost.put(UrlParams.DATE, UrlParams.DATE + i);
-                jsonObjectPost.put(UrlParams.TITLE, UrlParams.TITLE + i);
-                jsonObjectPost.put(UrlParams.BODY, UrlParams.BODY + i);
             } else {
-                /* The Post is invalid without those info */
+                /* The Post will be invalid without the associated ID */
                 jsonObjectPost.put(UrlParams.ID, "");
-                jsonObjectPost.put(UrlParams.DATE, "");
-                jsonObjectPost.put(UrlParams.TITLE, "");
-                jsonObjectPost.put(UrlParams.BODY, "");
             }
+            /* The date must be really a valid value, otherwise its parsing will fail */
+            jsonObjectPost.put(UrlParams.DATE, "2017-12-05T02:18:18.571Z");
+            jsonObjectPost.put(UrlParams.TITLE, UrlParams.TITLE + i);
+            jsonObjectPost.put(UrlParams.BODY, UrlParams.BODY + i);
             jsonObjectPost.put(UrlParams.IMAGE_URL, UrlParams.IMAGE_URL + i);
             jsonObjectPost.put(UrlParams.AUTHOR_ID, UrlParams.AUTHOR_ID + i);
             jsonArray.put(jsonObjectPost);

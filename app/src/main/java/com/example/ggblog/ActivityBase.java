@@ -445,7 +445,11 @@ public abstract class ActivityBase extends AppCompatActivity {
             String currPageRel = matcherPageRel.group(1);
             if (VDBG) Log.d(TAG, "PageLink=" + currPageLink + ", PageRel=" + currPageRel);
             if (currPageLink != null && currPageRel != null) {
-                /* Double check that the PageLink is coherent with the connection type */
+                /*
+                Double check that the PageLink is coherent with the connection type
+                Would it be also the case to check that the URL belongs to the same domain
+                of the Web Server, to avoid redirection? To be decided (not yet implemented)
+                */
                 if (currPageLink.startsWith(UrlParams.HTTP_HEADER) &&
                         mIsHttpsConnection) {
                     /* Replacing HTTP with HTTPS */

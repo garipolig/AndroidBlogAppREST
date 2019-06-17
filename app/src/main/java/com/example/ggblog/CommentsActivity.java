@@ -29,7 +29,7 @@ public class CommentsActivity extends ActivityBase {
 
     private static final String TAG = "CommentsActivity";
 
-    private Post mCurrentPost;
+    Post mCurrentPost;
 
     /*
     Needed to fill the table (ListView) of Comments, using the specific row layout for the Comment

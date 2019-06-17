@@ -95,7 +95,6 @@ public class MainActivityUnitTest {
     Since we have not received any answer from Web Server yet, we have the current situation:
     1) Layout correctly loaded with all the UI items not NULL
     2) Navigation Button disabled (to move to First/Prev/Next/Last pages)
-    3) Table listing the authors empty
     */
     @Test
     public void validateInitialLayoutState() {
@@ -111,7 +110,6 @@ public class MainActivityUnitTest {
         assertFalse(mMainActivity.mPrevPageButton.isEnabled());
         assertFalse(mMainActivity.mNextPageButton.isEnabled());
         assertFalse(mMainActivity.mLastPageButton.isEnabled());
-        assertNull(mMainActivity.mItemsListContentListView.getAdapter()); // Empty ListView
     }
 
     /*
@@ -156,13 +154,13 @@ public class MainActivityUnitTest {
 
     /*
     Once activity starts, a first request is sent to the Web Server to retrieve the data
-    The URL is stored in mLastJsonArrayRequestSentToServer.
+    The URL is stored in mLastJsonArrayRequestSent.
     Starting from now, all the following requests will depend on the URL associated to each button
     (first/prev/next/last page), which are automatically computed at each Server Response
     */
     @Test
     public void validateFirstRequest() {
-        /* The first request sent is stored in mLastJsonArrayRequestSentToServer */
+        /* The first request sent is stored in mLastJsonArrayRequestSent */
         assertEquals(INITIAL_REQUEST_TO_SERVER,
                 mMainActivity.mLastJsonArrayRequestSent.getUrl());
         /* The request is tagged with the Class Name */
@@ -174,12 +172,11 @@ public class MainActivityUnitTest {
         assertNull(mMainActivity.mPrevPageUrlRequest);
         assertNull(mMainActivity.mNextPageUrlRequest);
         assertNull(mMainActivity.mLastPageUrlRequest);
-        /* Pagination Buttons are disabled and Progress Bar visible, waiting for Server answer */
+        /* Pagination Buttons are disabled, waiting for Server answer */
         assertFalse(mMainActivity.mFirstPageButton.isEnabled());
         assertFalse(mMainActivity.mPrevPageButton.isEnabled());
         assertFalse(mMainActivity.mNextPageButton.isEnabled());
         assertFalse(mMainActivity.mLastPageButton.isEnabled());
-        assertEquals(View.VISIBLE, mMainActivity.mProgressBar.getVisibility());
     }
 
     /*
@@ -219,7 +216,7 @@ public class MainActivityUnitTest {
     }
 
     /*
-    The Server response is that transformed into a JsonArray and passed to the handleServerResponse
+    The Server response is transformed into a JsonArray and passed to the handleServerResponse
     if no errors occurred Server side.
     Validating that the method handleServerResponse of the MainActivity is able to correctly update
     the ListView with the list of Authors.
@@ -277,7 +274,7 @@ public class MainActivityUnitTest {
         assertTrue(errorShown.startsWith(mMainActivity.getString(R.string.error_message)));
     }
 
-    /* Creates one array of @num JSON objects containing Author info */
+    /* Creates one array of NUM_OF_AUTHORS JSON objects containing Author info */
     private static void initializeJsonArray(boolean isValid) throws Exception {
         JSONArray jsonArray = new JSONArray();
         for (int i = 0; i< NUM_OF_AUTHORS; i++) {

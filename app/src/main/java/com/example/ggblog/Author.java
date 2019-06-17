@@ -4,6 +4,8 @@ import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import java.util.Arrays;
 
 import org.json.JSONException;
@@ -174,7 +176,7 @@ public class Author implements Parcelable {
     }
 
     @Override
-    public String toString() {
+     public @NonNull String toString() {
         return  "Id=" + mId + " - " +
                 "Name=" + mName + " - " +
                 "User Name=" + mUserName + " - " +

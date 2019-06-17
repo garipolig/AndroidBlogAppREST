@@ -4,6 +4,8 @@ import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -149,7 +151,7 @@ public class Post implements Parcelable {
     }
 
     @Override
-    public String toString() {
+    public @NonNull String toString() {
         return  "Id=" + mId + " - " +
                 "Date=" + mDate + " - " +
                 "Title=" + mTitle + " - " +

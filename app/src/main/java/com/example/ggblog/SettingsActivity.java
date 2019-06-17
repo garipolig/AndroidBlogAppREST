@@ -150,7 +150,7 @@ public class SettingsActivity extends AppCompatActivity {
         }
     }
 
-    private static class SettingsFragment extends PreferenceFragmentCompat {
+    public static class SettingsFragment extends PreferenceFragmentCompat {
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
             if(VDBG) Log.d(TAG, "onCreatePreferences");
