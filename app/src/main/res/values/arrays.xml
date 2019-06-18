@@ -1,5 +1,47 @@
 <resources>
 
+    <string-array name="max_num_connection_retry_entries">
+        <item>No Retry</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+    </string-array>
+
+    <string-array name="max_num_connection_retry_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+    </string-array>
+
+    <string-array name="socket_timeout_entries">
+        <item>1 second</item>
+        <item>1,5 seconds</item>
+        <item>2 seconds</item>
+        <item>2,5 seconds</item>
+        <item>3 seconds</item>
+        <item>3,5 seconds</item>
+        <item>4 seconds</item>
+        <item>4,5 seconds</item>
+        <item>5 seconds</item>
+    </string-array>
+    <!-- Socket Timeout is expressed in ms -->
+    <string-array name="socket_timeout_values">
+        <item>1000</item>
+        <item>1500</item>
+        <item>2000</item>
+        <item>2500</item>
+        <item>3000</item>
+        <item>3500</item>
+        <item>4000</item>
+        <item>4500</item>
+        <item>5000</item>
+    </string-array>
+
     <string-array name="cache_hit_time_entries">
         <item>5 seconds</item>
         <item>15 seconds</item>

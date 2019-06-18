@@ -29,9 +29,9 @@ public class SettingsActivity extends AppCompatActivity {
             "https://sym-json-server.herokuapp.com";
 
     public static final String PREF_MAX_NUM_CONNECTION_RETRY_KEY = "maxNumConnectionRetry";
-    public static final String PREF_MAX_NUM_CONNECTION_RETRY_DEFAULT = "1";
+    public static final String PREF_MAX_NUM_CONNECTION_RETRY_DEFAULT = "2";
     public static final String PREF_SOCKET_TIMEOUT_KEY = "socketTimeout";
-    public static final String PREF_SOCKET_TIMEOUT_DEFAULT = "3000";
+    public static final String PREF_SOCKET_TIMEOUT_DEFAULT = "2500";
 
     public static final String PREF_AUTO_RETRY_WHEN_ONLINE_KEY = "autoRetryWhenOnline";
     public static final Boolean PREF_AUTO_RETRY_WHEN_ONLINE_DEFAULT = true;
@@ -64,10 +64,6 @@ public class SettingsActivity extends AppCompatActivity {
     public static final String PREF_COMMENTS_ORDERING_METHOD_KEY = "commentsOrderingMethod";
     public static final String PREF_COMMENTS_ORDERING_METHOD_DEFAULT = "&_sort=date&_order=asc";
 
-    /* Max number of connection retry must be positive (0 is fine as well) */
-    private static final String MAX_NUM_CONNECTION_RETRY_REGEXP = "^[0-9]*$";
-    /* Socket Timeout must be at least 1000 ms (1 second) */
-    private static final String SOCKET_TIMEOUT_REGEXP = "^[1-9][0-9]{3}[0-9]*$";
     /* Max number of items must be more than 0 */
     private static final String MAX_NUM_ITEMS_PER_PAGE_REGEXP = "^[1-9][0-9]*$";
     /* URL must contain http:// or https:// + any character */
@@ -112,16 +108,6 @@ public class SettingsActivity extends AppCompatActivity {
                 switch (key) {
                     case PREF_WEB_SERVER_URL_KEY:
                         if (!newPreferenceValue.matches(WEB_SERVER_URL_REGEXP)) {
-                            isPreferenceValid = false;
-                        }
-                        break;
-                    case PREF_MAX_NUM_CONNECTION_RETRY_KEY:
-                        if (!newPreferenceValue.matches(MAX_NUM_CONNECTION_RETRY_REGEXP)) {
-                            isPreferenceValid = false;
-                        }
-                        break;
-                    case PREF_SOCKET_TIMEOUT_KEY:
-                        if (!newPreferenceValue.matches(SOCKET_TIMEOUT_REGEXP)) {
                             isPreferenceValid = false;
                         }
                         break;
@@ -179,8 +165,6 @@ public class SettingsActivity extends AppCompatActivity {
             if(VDBG) Log.d(TAG, "onCreatePreferences");
             setPreferencesFromResource(R.xml.preferences, rootKey);
             bindPreferenceToChangeListener(findPreference(PREF_WEB_SERVER_URL_KEY));
-            bindPreferenceToChangeListener(findPreference(PREF_MAX_NUM_CONNECTION_RETRY_KEY));
-            bindPreferenceToChangeListener(findPreference(PREF_SOCKET_TIMEOUT_KEY));
             bindPreferenceToChangeListener(findPreference(PREF_AUTHORS_SUB_PAGE_KEY));
             bindPreferenceToChangeListener(findPreference(PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY));
             bindPreferenceToChangeListener(findPreference(PREF_POSTS_SUB_PAGE_KEY));

@@ -1,12 +1,12 @@
-# AndroidBlogAppREST
-Android application that retrieves blog information from a Web Server using Google Volley APIs.
+The goal of this project is to implement an Android Application that communicates with a Web Server to retrieve information about authors, posts and comments.
 
-The Application will consists in 3 pages (Activities):
+The application is using Google Volley as HTTP library to communicate with the Server and to perform the caching and retry mechanisms. 
 
-1) Main Page (entry point when opening the app): it shows the list of Authors.
-When clicking on a specific author you will access to the next page: Author Details
+When the user starts the application, the first screen shows the list of authors available on the Blog.
 
-2) Author Details: contains a header with the author's details and a list of all the posts written by the selected author (title, date, body).
-When clicking on a specific post of the list, you will access to a new page: Post Details
+Once a specific author is selected, the user is redirected to another page listing all the posts related to that author, with the addition of further information about the author, such as photo, email, address.
 
-3) Post Details: contains a header with the post's details and a list of all the comments related to the selected post.
+Finally, once a specific post is selected, the user is redirected to the final page which is listing all the comments related to that post, with the addition of further information about the post itself such as picture, date, title, content.
+
+
+![Main Flow](documentation/Main_Flow.png)

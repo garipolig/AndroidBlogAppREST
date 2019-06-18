@@ -8,17 +8,21 @@
             app:title="@string/web_server_url_title"
             app:useSimpleSummaryProvider="true"/>
 
-        <EditTextPreference
+        <ListPreference
             app:key="maxNumConnectionRetry"
-            app:defaultValue="1"
+            app:defaultValue="2"
+            app:entries="@array/max_num_connection_retry_entries"
+            app:entryValues="@array/max_num_connection_retry_values"
             app:title="@string/max_num_connection_retry_title"
-            app:useSimpleSummaryProvider="true"/>
+            app:useSimpleSummaryProvider="true" />
 
-        <EditTextPreference
+        <ListPreference
             app:key="socketTimeout"
-            app:defaultValue="3000"
+            app:defaultValue="2500"
+            app:entries="@array/socket_timeout_entries"
+            app:entryValues="@array/socket_timeout_values"
             app:title="@string/socket_timeout_title"
-            app:useSimpleSummaryProvider="true"/>
+            app:useSimpleSummaryProvider="true" />
 
         <SwitchPreferenceCompat
             app:key="autoRetryWhenOnline"
