@@ -3,7 +3,10 @@ package com.example.ggblog;
 /* Parameters/attributes present in the JSON response sent by the Web Server */
 final class JsonParams {
 
-    /* E.g. Link=<http://sym-json-server.herokuapp.com/authors?_page=1>; rel="first" */
+    /*
+    E.g. Link=<http://my-json-server.typicode.com/garipolig/microblogapp/
+    authors?_page=1>; rel="first"
+    */
     public static final String RESPONSE_HEADER_LINK = "Link";
     public static final String RESPONSE_HEADER_DATE = "Date";
     public static final String RESPONSE_HEADER_LAST_MODIFIED = "Last-Modified";
@@ -16,12 +19,12 @@ final class JsonParams {
     /*
     Page links are between "<" and ">" in the JSON Response Header, like the following example:
     Link=
-    <http://sym-json-server.herokuapp.com/authors?_page=1&_sort=name&_order=asc&_limit=20>;
-    rel="first",
-    <http://sym-json-server.herokuapp.com/authors?_page=2&_sort=name&_order=asc&_limit=20>;
-    rel="next",
-    <http://sym-json-server.herokuapp.com/authors?_page=13&_sort=name&_order=asc&_limit=20>;
-    rel="last"
+    <http://my-json-server.typicode.com/garipolig/microblogapp/
+    authors?_page=1&_sort=name&_order=asc&_limit=20>; rel="first",
+    <http://my-json-server.typicode.com/garipolig/microblogapp/
+    authors?_page=2&_sort=name&_order=asc&_limit=20>; rel="next",
+    <http://my-json-server.typicode.com/garipolig/microblogapp/
+    authors?_page=13&_sort=name&_order=asc&_limit=20>; rel="last"
     */
     public static final String RESPONSE_HEADER_LINK_REGEXP = "<([^\"]*)>";
 

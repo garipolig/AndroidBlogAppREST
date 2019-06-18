@@ -4,7 +4,7 @@
 
         <EditTextPreference
             app:key="webServerUrl"
-            app:defaultValue="https://sym-json-server.herokuapp.com"
+            app:defaultValue="https://my-json-server.typicode.com/garipolig/microblogapp"
             app:title="@string/web_server_url_title"
             app:useSimpleSummaryProvider="true"/>
 
@@ -59,7 +59,7 @@
 
         <EditTextPreference
             app:key="maxNumAuthorsPerPage"
-            app:defaultValue="20"
+            app:defaultValue="10"
             app:title="@string/max_num_authors_per_page_title"
             app:useSimpleSummaryProvider="true" />
 

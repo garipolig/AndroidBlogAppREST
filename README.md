@@ -8,5 +8,9 @@ Once a specific author is selected, the user is redirected to another page listi
 
 Finally, once a specific post is selected, the user is redirected to the final page which is listing all the comments related to that post, with the addition of further information about the post itself such as picture, date, title, content.
 
+A detailed overview is available [here](documentation).
 
+The APK to be installed on Android Phone is available [here](release).
+
+<br/><br/>
 ![Main Flow](documentation/Main_Flow.png)

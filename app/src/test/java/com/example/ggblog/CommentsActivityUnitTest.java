@@ -33,8 +33,8 @@ All the method belonging to the base class won't be retested (already tested for
 public class CommentsActivityUnitTest {
 
     private static final String INITIAL_REQUEST_TO_SERVER =
-            "https://sym-json-server.herokuapp.com/comments?_page=1&postId=id&_limit=20" +
-                    "&_sort=date&_order=asc";
+            "https://my-json-server.typicode.com/garipolig/microblogapp/" +
+                    "comments?_page=1&postId=id&_limit=10&_sort=date&_order=asc";
 
     private static final int NUM_OF_COMMENTS = 5;
 

@@ -40,7 +40,7 @@
     <string name="web_server_url_title">Web Server URL</string>
     <string name="auto_retry_when_online_title">Auto-Retry when Online</string>
     <string name="max_num_connection_retry_title">Max Number of Retries</string>
-    <string name="socket_timeout_title">Socket Timeout (ms)</string>
+    <string name="socket_timeout_title">Socket Timeout</string>
     <string name="auto_retry_when_online_summary_on">Retry on network availability,
         if data retrieval failed due to missing connection</string>
     <string name="auto_retry_when_online_summary_off">Retry only when manually requested (use

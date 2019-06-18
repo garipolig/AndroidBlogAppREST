@@ -35,16 +35,20 @@ that I won't do again the same checks in the Unit Tests of the other Activities
 public class MainActivityUnitTest {
 
     private static final String INITIAL_REQUEST_TO_SERVER =
-            "https://sym-json-server.herokuapp.com/authors?_page=1&_limit=20&_sort=name&_order=asc";
+            "https://my-json-server.typicode.com/garipolig/microblogapp/" +
+                    "authors?_page=1&_limit=10&_sort=name&_order=asc";
 
     private static final String FIRST_PAGE_URL =
-            "https://sym-json-server.herokuapp.com/authors?_page=1&_limit=20";
+            "https://my-json-server.typicode.com/garipolig/microblogapp/" +
+                    "authors?_page=1&_limit=20";
 
     private static final String NEXT_PAGE_URL =
-            "https://sym-json-server.herokuapp.com/authors?_page=2&_limit=20";
+            "https://my-json-server.typicode.com/garipolig/microblogapp/" +
+                    "authors?_page=2&_limit=20";
 
     private static final String LAST_PAGE_URL =
-            "https://sym-json-server.herokuapp.com/authors?_page=13&_limit=20";
+            "https://my-json-server.typicode.com/garipolig/microblogapp/" +
+                    "authors?_page=13&_limit=20";
 
     /* We are starting from Page 1, so there is no previous page */
     private static final String HEADER_LINK =
