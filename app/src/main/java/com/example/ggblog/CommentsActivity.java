@@ -1,40 +1,47 @@
 package com.example.ggblog;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.ListAdapter;
+import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.android.volley.toolbox.NetworkImageView;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.List;
-
-/* Handles the list of Comments */
-public class CommentsActivity extends ActivityBase {
+/* Displays the list of Comments on the UI */
+public class CommentsActivity extends BaseActivity {
 
     private static final String TAG = "CommentsActivity";
 
-    Post mCurrentPost;
+    private Post mCurrentPost;
 
-    /*
-    Needed to fill the table (ListView) of Comments, using the specific row layout for the Comment
-    (see comment_row.xml)
-    */
+    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            processResponse(intent);
+        }
+    };
+
+    /* Adapter able to properly fill the List of Comments (see comment_row.xml) */
     class CustomAdapter extends ArrayAdapter<Comment> {
         private final Context mContext;
         private final int mLayoutResourceId;
@@ -87,84 +94,97 @@ public class CommentsActivity extends ActivityBase {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate");
         mCurrentPost = null;
-        ActionBar actionBar = getSupportActionBar();
+        mIsServiceBound = false;
+        setContentView(R.layout.activity_comments);
+        initLayout();
         NetworkImageView postImageNetworkImageView = findViewById(R.id.postImage);
         TextView authorNameTextView = findViewById(R.id.authorName);
         TextView postDateTextView = findViewById(R.id.postDate);
         TextView postTitleTextView = findViewById(R.id.postTitle);
         TextView postBodyTextView = findViewById(R.id.postBody);
-        if (actionBar != null && postImageNetworkImageView != null &&
-                postDateTextView != null && postTitleTextView != null && postBodyTextView != null) {
-            /* Needed to show the back button on the TaskBar */
+        /* Needed to show the back button on the TaskBar */
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
             actionBar.setDisplayHomeAsUpEnabled(true);
             actionBar.setDisplayShowHomeEnabled(true);
-            /* Comments are not clickable */
-            mItemsListContentListView.setOnItemClickListener(null);
-            /* The Intent used to start this activity
-            Since this Activity is started by the PostsActivity, it will contain a Post
-            */
-            Intent intent = getIntent();
-            if (intent != null) {
-                Post post = intent.getParcelableExtra(EXTRA_MESSAGE);
-                if (post != null && post.isValid()) {
-                    if (VDBG) Log.d(TAG, "Post received=" + post);
-                    /* Storing the post globally for future usages (by other methods) */
-                    mCurrentPost = post;
-                    Author author = post.getAuthor();
-                    if (author != null) {
-                        authorNameTextView.setText(author.getName());
-                    } else {
-                        Log.e(TAG, "Unable to retrieve Author");
-                    }
-                    String postDate = getString(R.string.unknown_date);
-                    if (post.getDate() != null) {
-                        postDate = formatDate(post.getDate());
-                    } else {
-                        Log.e(TAG, "Unable to retrieve the Post date");
-                    }
-                    postDateTextView.setText(postDate);
-                    postTitleTextView.setText(post.getTitle());
-                    postBodyTextView.setText(post.getBody());
-                    /* It's not mandatory for a post to have an associated image */
-                    if (post.getImageUrl() != null && !post.getImageUrl().isEmpty()) {
-                        /* Showing the image placeholder (hidden by default)*/
-                        postImageNetworkImageView.setVisibility(View.VISIBLE);
-                        /* Show the default image until the network one is retrieved */
-                        postImageNetworkImageView.setDefaultImageResId(
-                                R.drawable.default_post_image);
-                        /* Retrieving image from server/cache */
-                        setImage(post.getImageUrl(), postImageNetworkImageView);
-                    }
-                    /* When activity is created, retrieve the Comments to show */
-                    retrieveInitialDataFromServer(post);
-                } else {
-                    Log.e(TAG, "Post is NULL or not valid");
+        }
+        /* This Intent contains the Post sent by the PostsActivity */
+        Intent intent = getIntent();
+        if (intent != null) {
+            Post post = intent.getParcelableExtra(EXTRA_MESSAGE);
+            if (post != null && post.isValid()) {
+                if (VDBG) Log.d(TAG, "Post received=" + post);
+                /* Storing the post globally for future usages (by other methods) */
+                mCurrentPost = post;
+                Author author = post.getAuthor();
+                authorNameTextView.setText(author.getName());
+                postDateTextView.setText(formatDate(post.getDate()));
+                postTitleTextView.setText(post.getTitle());
+                postBodyTextView.setText(post.getBody());
+                /* It's not mandatory for a post to have an associated image */
+                if (post.getImageUrl() != null && !post.getImageUrl().isEmpty()) {
+                /* Showing the image placeholder (hidden by default)*/
+                postImageNetworkImageView.setVisibility(View.VISIBLE);
+                /* Show the default image until the network one is retrieved */
+                postImageNetworkImageView.setDefaultImageResId(
+                R.drawable.default_post_image);
+                /* Retrieving image from server/cache */
+                setImage(post.getImageUrl(), postImageNetworkImageView);
                 }
+                IntentFilter intentFilter = new IntentFilter();
+                intentFilter.addAction(HttpGetService.RESTART_APPLICATION_ACTION);
+                intentFilter.addAction(HttpGetService.COMMENT_INFO_CHANGED_ACTION);
+                LocalBroadcastManager.getInstance(this).registerReceiver(mReceiver, intentFilter);
+                Intent serviceIntent = new Intent(getApplicationContext(), HttpGetService.class);
+                getApplicationContext().startService(serviceIntent);
+
             } else {
-                Log.e(TAG, "unable to retrieve the intent");
+                Log.e(TAG, "Post is NULL or not valid");
             }
         } else {
-            Log.e(TAG, "An error occurred while retrieving layout elements");
+            Log.e(TAG, "unable to retrieve the intent");
         }
     }
 
-    int getContentView() {
-        return R.layout.activity_comments;
+    @Override
+    protected void onDestroy() {
+        if (DBG) Log.d(TAG, "onDestroy");
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver);
+        if (mService != null) {
+            mService.clear(Enums.InfoType.COMMENT);
+        }
+        super.onDestroy();
     }
 
-    /*
-    Implementing this method because it's abstract in base class.
-    But it will be never called, since the comments are not clickable.
-    */
+    protected void getInfo(Enums.Page page) {
+        if (VDBG) Log.d(TAG, "getInfo Page=" + page);
+        /* Show progress bar and disable buttons, waiting for service response */
+        mProgressBar.setVisibility(View.VISIBLE);
+        disablePaginationButtons();
+        mService.getInfo(Enums.InfoType.COMMENT, page, mCurrentPost.getId());
+    }
+
+    private void processResponse(Intent intent) {
+        if (VDBG) Log.d(TAG, "processResponse");
+        String action = intent.getAction();
+        if (action != null) {
+            if (action.equals(HttpGetService.RESTART_APPLICATION_ACTION)) {
+                restart();
+            } else if (action.equals(HttpGetService.COMMENT_INFO_CHANGED_ACTION)) {
+                if (VDBG) Log.d(TAG, "COMMENT_INFO_CHANGED_ACTION");
+                JsonResponse response = intent.getParcelableExtra(HttpGetService.EXTRA_JSON_RESPONSE);
+                updateComments(response);
+            } else {
+                Log.e(TAG, "Unexpected message. Action= " + action);
+            }
+        }
+    }
+
     void handleItemClicked(int position) {
         if (VDBG) Log.d(TAG, "handleItemClicked position=" + position);
-        Log.e(TAG, "This method shall not be called: onItemClickListener is disabled");
+        // No action is previewed when clicking on a comment
     }
 
-    /*
-    Not used for the moment, but can be useful in the future if we need to extract further
-    information from a comment
-    */
     private Comment getItemAtPosition(int position) {
         if (VDBG) Log.d(TAG, "getItemAtPosition position=" + position);
         Comment comment = null;
@@ -177,11 +197,30 @@ public class CommentsActivity extends ActivityBase {
         return comment;
     }
 
-    /* Information to be displayed on the Table (Comments List) */
-    ArrayList<Comment> getInfoToDisplayOnTable(JSONArray jsonArray) {
-        if (VDBG) Log.d(TAG, "getInfoToDisplayOnTable");
-        ArrayList<Comment> itemsList = new ArrayList<>();
-        if (jsonArray != null && jsonArray.length() > 0) {
+    private void updateComments(JsonResponse response) {
+        if (VDBG) Log.d(TAG, "updateComments");
+        mProgressBar.setVisibility(View.GONE);
+        updateListViewTitle(response);
+        updateListViewContent(response);
+        updatePageCounters(response);
+        updatePaginationButtons(response);
+    }
+
+    private void updateListViewTitle(JsonResponse response) {
+        if (VDBG) Log.d(TAG, "updateListViewTitle");
+        super.updateListViewTitle(response.getTotalNumItemsAvailableOnServer(),
+                getString(R.string.comment), getString(R.string.comments));
+    }
+
+    private void updateListViewContent(JsonResponse response) {
+        if (VDBG) Log.d(TAG, "updateListViewContent");
+        if (response.isErrorResponse()) {
+            mIsInfoUnavailable = true;
+            setErrorMessage(response.getErrorType());
+        } else {
+            mIsInfoUnavailable = false;
+            ArrayList<Comment> commentsList = new ArrayList<>();
+            JSONArray jsonArray = response.getJsonArray();
             for (int i = 0; i < jsonArray.length(); i++) {
                 try {
                     JSONObject jsonObject = jsonArray.getJSONObject(i);
@@ -191,7 +230,7 @@ public class CommentsActivity extends ActivityBase {
                         comment.setPost(mCurrentPost);
                         if (comment.isValid()) {
                             if (VDBG) Log.d(TAG, "Current Comment " + comment);
-                            itemsList.add(comment);
+                            commentsList.add(comment);
                         } else {
                             Log.e(TAG, "The Comment is not valid -> discarded");
                         }
@@ -202,105 +241,9 @@ public class CommentsActivity extends ActivityBase {
                     e.printStackTrace();
                 }
             }
-        } else {
-            Log.e(TAG, "jsonArray is NULL or Empty");
+            ArrayAdapter<Comment> listAdapter =
+                    new CustomAdapter(getApplicationContext(), R.layout.comment_row, commentsList);
+            mItemsListContentListView.setAdapter(listAdapter);
         }
-        return itemsList;
-    }
-
-    /* A new URL Request will be used starting from now -> Asking initial data to server */
-    void handleSubPageChanged() {
-        if (VDBG) Log.d(TAG, "handleSubPageChanged");
-        retrieveInitialDataFromServer(mCurrentPost);
-    }
-
-    /* A new URL Request will be used starting from now -> Asking initial data to server */
-    void handleMaxNumItemsPerPageChanged() {
-        if (VDBG) Log.d(TAG, "handleMaxNumItemsPerPageChanged");
-        retrieveInitialDataFromServer(mCurrentPost);
-    }
-
-    /* A new URL Request will be used starting from now -> Asking initial data to server */
-    void handleOrderingMethodChanged() {
-        if (VDBG) Log.d(TAG, "handleOrderingMethodChanged");
-        retrieveInitialDataFromServer(mCurrentPost);
-    }
-
-    void handleServerResponse(JSONArray response) {
-        if (VDBG) Log.d(TAG, "displayServerResponse");
-        boolean isDataRetrievalSuccess = false;
-        ArrayList<Comment> infoToDisplay = getInfoToDisplayOnTable(response);
-        if (infoToDisplay != null && !infoToDisplay.isEmpty()) {
-            isDataRetrievalSuccess = true;
-            updateCustomListView(infoToDisplay);
-        } else {
-            Log.e(TAG, "unable to retrieve the info to display");
-        }
-        super.handleServerResponse(isDataRetrievalSuccess);
-    }
-
-    /*
-    Retrieving the first page of comments (we are using pagination)
-    Starting from this moment, the buttons firstPage, PrevPage, NextPage and LastPage will be
-    automatically populated with the correct URL Request, thanks to the Link section present in
-    the Response header
-    */
-    private void retrieveInitialDataFromServer(Post post) {
-        if (VDBG) Log.d(TAG, "retrieveInitialDataFromServer Post=" + post);
-        if (post != null && post.isValid()) {
-            if (mWebServerUrlPref != null && mSubPagePref != null) {
-                String url = mWebServerUrlPref + "/" + mSubPagePref + "?" +
-                        UrlParams.GET_PAGE_NUM + "=1";
-                if (DBG) Log.d(TAG, "Initial URL is " + url);
-                StringBuilder requestUrlSb = new StringBuilder(url);
-                UrlParams.addUrlParam(requestUrlSb, UrlParams.POST_ID, post.getId());
-                UrlParams.addUrlParam(requestUrlSb, UrlParams.LIMIT_NUM_RESULTS,
-                        mMaxNumItemsPerPagePref);
-
-                /* Add here any additional parameter you may want to add to the initial request */
-
-                /* mItemsOrderingMethodPref already in good format. No need to use addUrlParam */
-                requestUrlSb.append(mItemsOrderingMethodPref);
-                retrieveItemsList(requestUrlSb.toString());
-            } else {
-                /* This occurs when we failed to get those values from SharedPreferences */
-                Log.e(TAG, "Invalid URL. Web Server=" + mWebServerUrlPref +
-                        ", Sub Page=" + mSubPagePref);
-            }
-        } else {
-            Log.e(TAG, "post is NULL or not valid");
-        }
-    }
-
-    private void updateCustomListView(ArrayList<Comment> commentsList) {
-        if (VDBG) Log.d(TAG, "updateCustomListView");
-        ArrayAdapter<Comment> listAdapter =
-                new CustomAdapter(getApplicationContext(), R.layout.comment_row, commentsList);
-        mItemsListContentListView.setAdapter(listAdapter);
-    }
-
-    String getSubPagePrefKey() {
-        return SettingsActivity.PREF_COMMENTS_SUB_PAGE_KEY;
-    }
-
-    String getSubPagePrefDefault() {
-        return SettingsActivity.PREF_COMMENTS_SUB_PAGE_DEFAULT;
-    }
-
-    String getMaxNumPerPagePrefKey() {
-        return SettingsActivity.PREF_MAX_NUM_COMMENTS_PER_PAGE_KEY;
-    }
-
-    String getMaxNumPerPagePrefDefault() {
-        return SettingsActivity.PREF_MAX_NUM_COMMENTS_PER_PAGE_DEFAULT;
-    }
-
-    String getOrderingMethodPrefKey() {
-        return SettingsActivity.PREF_COMMENTS_ORDERING_METHOD_KEY;
-    }
-
-    String getOrderingMethodPrefDefault() {
-        return SettingsActivity.PREF_COMMENTS_ORDERING_METHOD_DEFAULT;
     }
 }
-

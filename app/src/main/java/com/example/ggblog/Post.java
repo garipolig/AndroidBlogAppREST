@@ -9,11 +9,7 @@ import androidx.annotation.NonNull;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-/*
-Post Info that cam be passed between Activities through Intent.
-This allow us to avoid asking the Post information to server when passing from the Posts List
-to Post details, since this information has already been retrieved and saved into this object.
-*/
+/* Contains all the info related to a Post */
 public class Post implements Parcelable {
 
     private static final String TAG = "Post";
@@ -63,19 +59,13 @@ public class Post implements Parcelable {
     public Post(JSONObject jsonObject) {
         if (jsonObject != null) {
             try {
-                mId = jsonObject.getString(UrlParams.ID);
-                mDate = jsonObject.getString(UrlParams.DATE);
-                mTitle = jsonObject.getString(UrlParams.TITLE);
-                mBody = jsonObject.getString(UrlParams.BODY);
-                mImageUrl = jsonObject.getString(UrlParams.IMAGE_URL);
-                /*
-                The JSON object received today, related to a post, contains only the author Id.
-                The rest of the information is filled by using the Author object passed through
-                intent by the MainActivity page.
-                A Post is not Valid without an associated valid Author.
-                */
+                mId = jsonObject.getString(Constants.PARAM_ID);
+                mDate = jsonObject.getString(Constants.PARAM_DATE);
+                mTitle = jsonObject.getString(Constants.PARAM_TITLE);
+                mBody = jsonObject.getString(Constants.PARAM_BODY);
+                mImageUrl = jsonObject.getString(Constants.PARAM_IMAGE_URL);
                 mAuthor = new Author();
-                mAuthor.setId(jsonObject.getString(UrlParams.AUTHOR_ID));
+                mAuthor.setId(jsonObject.getString(Constants.PARAM_AUTHOR_ID));
             } catch (JSONException e) {
                 e.printStackTrace();
             }

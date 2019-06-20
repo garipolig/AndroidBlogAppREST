@@ -9,11 +9,7 @@ import androidx.annotation.NonNull;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-/*
-Comment Info that can be passed between Activities through Intent.
-This is not yet done in the current implementation, since the Comment List page is the last page
-of the UI and we can only go back.
-*/
+/* Contains all the info related to a Comment */
 public class Comment implements Parcelable {
 
     private static final String TAG = "Comment";
@@ -66,20 +62,14 @@ public class Comment implements Parcelable {
     public Comment(JSONObject jsonObject) {
         if (jsonObject != null) {
             try {
-                mId = jsonObject.getString(UrlParams.ID);
-                mDate = jsonObject.getString(UrlParams.DATE);
-                mBody = jsonObject.getString(UrlParams.BODY);
-                mUserName = jsonObject.getString(UrlParams.USERNAME);
-                mEmail = jsonObject.getString(UrlParams.EMAIL);
-                mAvatarUrl = jsonObject.getString(UrlParams.AVATAR_URL);
-                /*
-                The JSON object received today, related to a comment, contains only the post Id.
-                The rest of the information is filled by using the Post object passed through
-                intent by the PostsActivity page.
-                A Comment is not Valid without an associated valid Post.
-                */
+                mId = jsonObject.getString(Constants.PARAM_ID);
+                mDate = jsonObject.getString(Constants.PARAM_DATE);
+                mBody = jsonObject.getString(Constants.PARAM_BODY);
+                mUserName = jsonObject.getString(Constants.PARAM_USERNAME);
+                mEmail = jsonObject.getString(Constants.PARAM_EMAIL);
+                mAvatarUrl = jsonObject.getString(Constants.PARAM_AVATAR_URL);
                 mPost = new Post();
-                mPost.setId(jsonObject.getString(UrlParams.POST_ID));
+                mPost.setId(jsonObject.getString(Constants.PARAM_POST_ID));
             } catch (JSONException e) {
                 e.printStackTrace();
             }

@@ -45,6 +45,9 @@
             android:theme="@style/Settings"
             android:screenOrientation="portrait">
         </activity>
+        <service
+            android:name=".HttpGetService">
+        </service>
 
     </application>
 

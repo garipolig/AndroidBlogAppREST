@@ -12,15 +12,13 @@ import com.android.volley.toolbox.ImageLoader;
 import com.android.volley.toolbox.Volley;
 import com.android.volley.Request;
 
-/*
-Singleton to have a single entry point which handles the communication with the Web
-Server and handles the cache
-*/
+/* Singleton used by HttpGetService to communicate with the Web Server, using Google Volley APIs */
 public class NetworkRequestUtils {
 
     private static final String TAG = "NetworkRequestUtils";
-    private static final boolean DBG = ActivityBase.DBG;
-    private static final boolean VDBG = ActivityBase.VDBG;
+
+    private static final boolean DBG = Log.isLoggable(TAG, Log.DEBUG);
+    private static final boolean VDBG = Log.isLoggable(TAG, Log.VERBOSE);
 
     private static final int MAX_NUM_ENTRIES_IN_CACHE = 20;
 

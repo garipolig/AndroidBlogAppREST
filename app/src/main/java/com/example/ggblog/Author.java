@@ -11,11 +11,7 @@ import java.util.Arrays;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-/*
-Author Info that can be passed between Activities through Intent.
-This allow us to avoid asking the Author information to server when passing from the Authors List
-to Author details, since this information has already been retrieved and saved into this object.
-*/
+/* Contains all the info related to an Author */
 public class Author implements Parcelable {
 
     private static final String TAG = "Author";
@@ -77,22 +73,18 @@ public class Author implements Parcelable {
     public Author(JSONObject jsonObject) {
         if (jsonObject != null) {
             try {
-                mId = jsonObject.getString(UrlParams.ID);
-                mName = jsonObject.getString(UrlParams.NAME);
-                mUserName = jsonObject.getString(UrlParams.USERNAME);
-                mEmail = jsonObject.getString(UrlParams.EMAIL);
-                mAvatarUrl = jsonObject.getString(UrlParams.AVATAR_URL);
+                mId = jsonObject.getString(Constants.PARAM_ID);
+                mName = jsonObject.getString(Constants.PARAM_NAME);
+                mUserName = jsonObject.getString(Constants.PARAM_USERNAME);
+                mEmail = jsonObject.getString(Constants.PARAM_EMAIL);
+                mAvatarUrl = jsonObject.getString(Constants.PARAM_AVATAR_URL);
                 JSONObject jsonObjectAddress =
-                        jsonObject.getJSONObject(UrlParams.ADDRESS);
-                if (jsonObjectAddress != null) {
+                        jsonObject.getJSONObject(Constants.PARAM_ADDRESS);
                     mAddressCoordinates = new String[2];
                     mAddressCoordinates[LATITUDE_ARRAY_INDEX] =
-                            jsonObjectAddress.getString(UrlParams.ADDRESS_LAT);
+                            jsonObjectAddress.getString(Constants.PARAM_ADDRESS_LAT);
                     mAddressCoordinates[LONGITUDE_ARRAY_INDEX] =
-                            jsonObjectAddress.getString(UrlParams.ADDRESS_LONG);
-                } else {
-                    Log.e(TAG, "unable to retrieve the author address");
-                }
+                            jsonObjectAddress.getString(Constants.PARAM_ADDRESS_LONG);
             } catch (JSONException e) {
                 e.printStackTrace();
             }

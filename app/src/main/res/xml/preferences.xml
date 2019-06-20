@@ -4,7 +4,7 @@
 
         <EditTextPreference
             app:key="webServerUrl"
-            app:defaultValue="https://my-json-server.typicode.com/garipolig/microblogapp"
+            app:defaultValue="https://sym-json-server.herokuapp.com"
             app:title="@string/web_server_url_title"
             app:useSimpleSummaryProvider="true"/>
 

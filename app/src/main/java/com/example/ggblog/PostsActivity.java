@@ -1,44 +1,48 @@
 package com.example.ggblog;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.location.Geocoder;
+import android.content.IntentFilter;
 import android.location.Address;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.ListAdapter;
+import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.android.volley.toolbox.NetworkImageView;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Locale;
 import java.util.List;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-/* Handles the list of Posts */
-public class PostsActivity extends ActivityBase {
+/* Displays the list of Posts on the UI */
+public class PostsActivity extends BaseActivity {
 
     private static final String TAG = "PostsActivity";
 
-    Author mCurrentAuthor;
+    private Author mCurrentAuthor;
 
-    /*
-    Needed to fill the table (ListView) of Posts, using the specific row layout for the Post
-    (see post_row.xml)
-    */
+    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            processResponse(intent);
+        }
+    };
+
+    /* Adapter able to properly fill the List of Posts (see post_row.xml) */
     class CustomAdapter extends ArrayAdapter<Post> {
         private final Context mContext;
         private final int mLayoutResourceId;
@@ -84,64 +88,92 @@ public class PostsActivity extends ActivityBase {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate");
         mCurrentAuthor = null;
-        ActionBar actionBar = getSupportActionBar();
+        mIsServiceBound = false;
+        setContentView(R.layout.activity_posts);
+        initLayout();
         NetworkImageView authorAvatarNetworkImageView = findViewById(R.id.authorAvatar);
         TextView authorNameTextView = findViewById(R.id.authorName);
         TextView authorUserNameTextView = findViewById(R.id.authorUserName);
         TextView authorEmailTextView = findViewById(R.id.authorEmail);
         TextView authorAddressTextView = findViewById(R.id.authorAddress);
-        if(actionBar != null && authorAvatarNetworkImageView != null &&
-                authorNameTextView != null && authorUserNameTextView != null &&
-                authorEmailTextView != null && authorAddressTextView != null) {
-            /* Needed to show the back button on the TaskBar */
+        /* Needed to show the back button on the TaskBar */
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
             actionBar.setDisplayHomeAsUpEnabled(true);
             actionBar.setDisplayShowHomeEnabled(true);
-            /* Default image until the network one is retrieved */
-            authorAvatarNetworkImageView.setDefaultImageResId(R.drawable.default_author_image);
-            /*
-            The Intent used to start this activity
-            Since this Activity is started by the MainActivity, it will contain an Author
-            */
-            Intent intent = getIntent();
-            if (intent != null) {
-                Author author = intent.getParcelableExtra(EXTRA_MESSAGE);
-                if (author != null && author.isValid()) {
-                    if (VDBG) Log.d(TAG, "Author received=" + author);
-                    /* Storing the author globally for future usages (by other methods) */
-                    mCurrentAuthor = author;
-                    authorNameTextView.setText(author.getName());
-                    authorUserNameTextView.setText(author.getUserName());
-                    authorEmailTextView.setText(author.getEmail());
-                    setImage(author.getAvatarUrl(), authorAvatarNetworkImageView);
-                    setAuthorAddress(authorAddressTextView, author.getAddressLatitude(),
-                            author.getAddressLongitude());
-                    /* When activity is created, retrieve the Posts to show */
-                    retrieveInitialDataFromServer(author);
-                } else {
-                    Log.e(TAG, "Author is NULL or not valid");
-                }
+        }
+        /* Default image until the network one is retrieved */
+        authorAvatarNetworkImageView.setDefaultImageResId(R.drawable.default_author_image);
+        /* This Intent contains the Author sent by the MainActivity */
+        Intent intent = getIntent();
+        if (intent != null) {
+            Author author = intent.getParcelableExtra(EXTRA_MESSAGE);
+            if (author != null && author.isValid()) {
+                if (VDBG) Log.d(TAG, "Author received=" + author);
+                /* Storing the author globally for future usages (by other methods) */
+                mCurrentAuthor = author;
+                authorNameTextView.setText(author.getName());
+                authorUserNameTextView.setText(author.getUserName());
+                authorEmailTextView.setText(author.getEmail());
+                setImage(author.getAvatarUrl(), authorAvatarNetworkImageView);
+                setAuthorAddress(authorAddressTextView, author.getAddressLatitude(),
+                        author.getAddressLongitude());
+                IntentFilter intentFilter = new IntentFilter();
+                intentFilter.addAction(HttpGetService.RESTART_APPLICATION_ACTION);
+                intentFilter.addAction(HttpGetService.POST_INFO_CHANGED_ACTION);
+                LocalBroadcastManager.getInstance(this).registerReceiver(mReceiver, intentFilter);
+                Intent serviceIntent = new Intent(getApplicationContext(), HttpGetService.class);
+                getApplicationContext().startService(serviceIntent);
+
+
             } else {
-                Log.e(TAG, "unable to retrieve the intent");
+                Log.e(TAG, "Author is NULL or not valid");
             }
         } else {
-            Log.e(TAG, "An error occurred while retrieving layout elements");
+            Log.e(TAG, "unable to retrieve the intent");
         }
     }
 
-    int getContentView() {
-        return R.layout.activity_posts;
+    @Override
+    protected void onDestroy() {
+        if (DBG) Log.d(TAG, "onDestroy");
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver);
+        if (mService != null) {
+            mService.clear(Enums.InfoType.POST);
+        }
+        super.onDestroy();
+    }
+
+    protected void getInfo(Enums.Page page) {
+        if (VDBG) Log.d(TAG, "getInfo Page=" + page);
+        /* Show progress bar and disable buttons, waiting for service response */
+        mProgressBar.setVisibility(View.VISIBLE);
+        disablePaginationButtons();
+        mService.getInfo(Enums.InfoType.POST, page, mCurrentAuthor.getId());
+    }
+
+    private void processResponse(Intent intent) {
+        if (VDBG) Log.d(TAG, "processResponse");
+        String action = intent.getAction();
+        if (action != null) {
+            if (action.equals(HttpGetService.RESTART_APPLICATION_ACTION)) {
+                restart();
+            } else if (action.equals(HttpGetService.POST_INFO_CHANGED_ACTION)) {
+                if (VDBG) Log.d(TAG, "POST_INFO_CHANGED_ACTION");
+                JsonResponse response = intent.getParcelableExtra(HttpGetService.EXTRA_JSON_RESPONSE);
+                updatePosts(response);
+            } else {
+                Log.e(TAG, "Unexpected message. Action= " + action);
+            }
+        }
     }
 
     void handleItemClicked(int position) {
         if (VDBG) Log.d(TAG, "handleItemClicked position=" + position);
         Post post = getItemAtPosition(position);
         if (post != null) {
-            /*
-            Cancel any ongoing requests made by this Activity, since we are switching to a new one.
-            The Class Name is used as tag (the same used to trigger the request).
-            */
-            NetworkRequestUtils.getInstance(getApplicationContext()).cancelAllRequests(
-                    getLocalClassName());
+            /* Cancel ongoing requests made by this Activity, since we are moving to a new page */
+            mService.cancelPendingRequests(Enums.InfoType.POST);
             Intent intent = new Intent(getApplicationContext(), CommentsActivity.class);
             if (VDBG) Log.d(TAG, "Post to send: " + post);
             intent.putExtra(EXTRA_MESSAGE, post);
@@ -163,11 +195,30 @@ public class PostsActivity extends ActivityBase {
         return post;
     }
 
-    /* Information to be displayed on the Table (Posts List) */
-    ArrayList<Post> getInfoToDisplayOnTable(JSONArray jsonArray) {
-        if (VDBG) Log.d(TAG, "getInfoToDisplayOnTable");
-        ArrayList<Post> itemsList = new ArrayList<>();
-        if (jsonArray != null && jsonArray.length() > 0) {
+    private void updatePosts(JsonResponse response) {
+        if (VDBG) Log.d(TAG, "updatePosts");
+        mProgressBar.setVisibility(View.GONE);
+        updateListViewTitle(response);
+        updateListViewContent(response);
+        updatePageCounters(response);
+        updatePaginationButtons(response);
+    }
+
+    private void updateListViewTitle(JsonResponse response) {
+        if (VDBG) Log.d(TAG, "updateListViewTitle");
+        super.updateListViewTitle(response.getTotalNumItemsAvailableOnServer(),
+                getString(R.string.post), getString(R.string.posts));
+    }
+
+    private void updateListViewContent(JsonResponse response) {
+        if (VDBG) Log.d(TAG, "updateListViewContent");
+        if (response.isErrorResponse()) {
+            mIsInfoUnavailable = true;
+            setErrorMessage(response.getErrorType());
+        } else {
+            mIsInfoUnavailable = false;
+            ArrayList<Post> postsList = new ArrayList<>();
+            JSONArray jsonArray = response.getJsonArray();
             for (int i = 0; i < jsonArray.length(); i++) {
                 try {
                     JSONObject jsonObject = jsonArray.getJSONObject(i);
@@ -177,156 +228,40 @@ public class PostsActivity extends ActivityBase {
                         post.setAuthor(mCurrentAuthor);
                         if (post.isValid()) {
                             if (VDBG) Log.d(TAG, "Current Post " + post);
-                            itemsList.add(post);
+                            postsList.add(post);
                         } else {
                             Log.e(TAG, "The Post is not valid -> discarded");
                         }
                     } else {
                         Log.e(TAG, "jsonObject is NULL");
                     }
-                } catch(JSONException e){
+                } catch (JSONException e) {
                     e.printStackTrace();
                 }
             }
-        } else {
-            Log.e(TAG, "jsonArray is NULL or Empty");
+            ArrayAdapter<Post> listAdapter =
+                    new CustomAdapter(getApplicationContext(), R.layout.post_row, postsList);
+            mItemsListContentListView.setAdapter(listAdapter);
         }
-        return itemsList;
-    }
-
-    /* A new URL Request will be used starting from now -> Asking initial data to server */
-    void handleSubPageChanged() {
-        if (VDBG) Log.d(TAG, "handleSubPageChanged");
-        retrieveInitialDataFromServer(mCurrentAuthor);
-    }
-
-    /* A new URL Request will be used starting from now -> Asking initial data to server */
-    void handleMaxNumItemsPerPageChanged() {
-        if (VDBG) Log.d(TAG, "handleMaxNumItemsPerPageChanged");
-        retrieveInitialDataFromServer(mCurrentAuthor);
-    }
-
-    /* A new URL Request will be used starting from now -> Asking initial data to server */
-    void handleOrderingMethodChanged() {
-        if (VDBG) Log.d(TAG, "handleOrderingMethodChanged");
-        retrieveInitialDataFromServer(mCurrentAuthor);
-    }
-
-    void handleServerResponse(JSONArray response) {
-        if (VDBG) Log.d(TAG, "displayServerResponse");
-        boolean isDataRetrievalSuccess = false;
-        ArrayList<Post> infoToDisplay = getInfoToDisplayOnTable(response);
-        if (infoToDisplay != null && !infoToDisplay.isEmpty()) {
-            isDataRetrievalSuccess = true;
-            updateCustomListView(infoToDisplay);
-        } else {
-            Log.e(TAG, "unable to retrieve the info to display");
-        }
-        super.handleServerResponse(isDataRetrievalSuccess);
-    }
-
-    /*
-    Retrieving the first page of posts (we are using pagination)
-    Starting from this moment, the buttons firstPage, PrevPage, NextPage and LastPage will be
-    automatically populated with the correct URL Request, thanks to the Link section present in
-    the Response header
-    */
-    private void retrieveInitialDataFromServer(Author author) {
-        if (VDBG) Log.d(TAG, "retrieveInitialDataFromServer Author=" + author);
-        if (author != null && author.isValid()) {
-            if (mWebServerUrlPref != null && mSubPagePref != null) {
-                String url = mWebServerUrlPref + "/" + mSubPagePref + "?" +
-                        UrlParams.GET_PAGE_NUM + "=1";
-                if (DBG) Log.d(TAG, "Initial URL is " + url);
-                StringBuilder requestUrlSb = new StringBuilder(url);
-                UrlParams.addUrlParam(requestUrlSb, UrlParams.AUTHOR_ID, author.getId());
-                UrlParams.addUrlParam(requestUrlSb, UrlParams.LIMIT_NUM_RESULTS,
-                        mMaxNumItemsPerPagePref);
-
-                /* Add here any additional parameter you may want to add to the initial request */
-
-                /* mItemsOrderingMethodPref already in good format. No need to use addUrlParam */
-                requestUrlSb.append(mItemsOrderingMethodPref);
-                retrieveItemsList(requestUrlSb.toString());
-            } else {
-                /* This occurs when we failed to get those values from SharedPreferences */
-                Log.e(TAG, "Invalid URL. Web Server=" + mWebServerUrlPref +
-                        ", Sub Page=" + mSubPagePref);
-            }
-        } else {
-            Log.e(TAG, "author is NULL or not Valid");
-        }
-    }
-
-    private void updateCustomListView(ArrayList<Post> postsList) {
-        if (VDBG) Log.d(TAG, "updateCustomListView");
-        ArrayAdapter<Post> listAdapter =
-                new CustomAdapter(getApplicationContext(), R.layout.post_row, postsList);
-        mItemsListContentListView.setAdapter(listAdapter);
     }
 
     private void setAuthorAddress(TextView authorAddressTextView,
                                   String latitude, String longitude) {
         if (VDBG) Log.d(TAG,
                 "setAuthorAddress Latitude=" + latitude + ", Longitude=" + longitude);
-        if (latitude != null && !latitude.isEmpty() &&
-                longitude != null && !longitude.isEmpty()) {
-            Geocoder geocoder = new Geocoder(this, Locale.getDefault());
-            try {
-                double latitudeDouble = Double.parseDouble(latitude);
-                if (VDBG) Log.d(TAG, "Latitude=" + latitude);
-                double longitudeDouble = Double.parseDouble(longitude);
-                if (VDBG) Log.d(TAG, "Longitude=" + longitude);
-                List<Address> addresses = geocoder.getFromLocation(
-                        latitudeDouble, longitudeDouble, 1);
-                if (addresses != null && !addresses.isEmpty()) {
-                    String addressToDisplay;
-                    /* Showing only the Country for the moment */
-                    //String address = addresses.get(0).getAddressLine(0);
-                    //String city = addresses.get(0).getLocality();
-                    //String postalCode = addresses.get(0).getPostalCode();
-                    //String state = addresses.get(0).getAdminArea();
-                    String country = addresses.get(0).getCountryName();
-                    if (country != null && !country.isEmpty()) {
-                        addressToDisplay = "(" + country + ")";
-                        authorAddressTextView.setText(addressToDisplay);
-                    } else {
-                        /* Not an error, since this info could be not available for an author */
-                        if (VDBG) Log.d(TAG, "Author country not available");
-                    }
-                } else {
-                    if (VDBG) Log.d(TAG, "Author full address not available");
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
+        Address address = getAddress(latitude, longitude);
+        if (address != null) {
+            String addressToDisplay;
+            /* Showing only the Country for the moment */
+            //String address = addresses.get(0).getAddressLine(0);
+            //String city = addresses.get(0).getLocality();
+            //String postalCode = addresses.get(0).getPostalCode();
+            //String state = addresses.get(0).getAdminArea();
+            String country = address.getCountryName();
+            if (country != null && !country.isEmpty()) {
+                addressToDisplay = "(" + country + ")";
+                authorAddressTextView.setText(addressToDisplay);
             }
-        } else {
-            if (VDBG) Log.d(TAG, "Latitude/Longitude are not available");
         }
     }
-
-    String getSubPagePrefKey() {
-        return SettingsActivity.PREF_POSTS_SUB_PAGE_KEY;
-    }
-
-    String getSubPagePrefDefault() {
-        return SettingsActivity.PREF_POSTS_SUB_PAGE_DEFAULT;
-    }
-
-    String getMaxNumPerPagePrefKey() {
-        return SettingsActivity.PREF_MAX_NUM_POSTS_PER_PAGE_KEY;
-    }
-
-    String getMaxNumPerPagePrefDefault() {
-        return SettingsActivity.PREF_MAX_NUM_POSTS_PER_PAGE_DEFAULT;
-    }
-
-    String getOrderingMethodPrefKey() {
-        return SettingsActivity.PREF_POSTS_ORDERING_METHOD_KEY;
-    }
-
-    String getOrderingMethodPrefDefault() {
-        return SettingsActivity.PREF_POSTS_ORDERING_METHOD_DEFAULT;
-    }
 }
-

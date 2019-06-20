@@ -12,27 +12,22 @@ import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceManager;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
-
-/* Handles the SharedPreferences (user settings) */
+/* Displays the Settings page on the UI */
 public class SettingsActivity extends AppCompatActivity {
 
     private static final String TAG = "SettingsActivity";
-    private static final boolean DBG = ActivityBase.DBG;
-    private static final boolean VDBG = ActivityBase.VDBG;
+
+    private static final boolean DBG = Log.isLoggable(TAG, Log.DEBUG);
+    private static final boolean VDBG = Log.isLoggable(TAG, Log.VERBOSE);
 
     /* General Preferences */
     public static final String PREF_WEB_SERVER_URL_KEY = "webServerUrl";
     public static final String PREF_WEB_SERVER_URL_DEFAULT =
-            "https://my-json-server.typicode.com/garipolig/microblogapp";
-
+            "https://sym-json-server.herokuapp.com";
     public static final String PREF_MAX_NUM_CONNECTION_RETRY_KEY = "maxNumConnectionRetry";
     public static final String PREF_MAX_NUM_CONNECTION_RETRY_DEFAULT = "2";
     public static final String PREF_SOCKET_TIMEOUT_KEY = "socketTimeout";
     public static final String PREF_SOCKET_TIMEOUT_DEFAULT = "2500";
-
     public static final String PREF_AUTO_RETRY_WHEN_ONLINE_KEY = "autoRetryWhenOnline";
     public static final Boolean PREF_AUTO_RETRY_WHEN_ONLINE_DEFAULT = true;
     public static final String PREF_CACHE_HIT_TIME_KEY = "cacheHitTime";
@@ -66,41 +61,20 @@ public class SettingsActivity extends AppCompatActivity {
 
     /* Max number of items must be more than 0 */
     private static final String MAX_NUM_ITEMS_PER_PAGE_REGEXP = "^[1-9][0-9]*$";
+
     /* URL must contain http:// or https:// + any character */
     private static final String WEB_SERVER_URL_REGEXP = "^(https?)://.+";
 
-    /*
-    List of all the SharedPreference key we are able to handle.
-    We will iterate over this list at the start of the application, to retrieve all the Preferences.
-    */
-    public static final Set<String> PREFERENCES_LIST_KEYS = new HashSet<>(Arrays.asList(
-            PREF_WEB_SERVER_URL_KEY,
-            PREF_MAX_NUM_CONNECTION_RETRY_KEY,
-            PREF_SOCKET_TIMEOUT_KEY,
-            PREF_AUTO_RETRY_WHEN_ONLINE_KEY,
-            PREF_CACHE_HIT_TIME_KEY,
-            PREF_CACHE_EXPIRATION_TIME_KEY,
-            PREF_AUTHORS_SUB_PAGE_KEY,
-            PREF_MAX_NUM_AUTHORS_PER_PAGE_KEY,
-            PREF_AUTHORS_ORDERING_METHOD_KEY,
-            PREF_POSTS_SUB_PAGE_KEY,
-            PREF_MAX_NUM_POSTS_PER_PAGE_KEY,
-            PREF_POSTS_ORDERING_METHOD_KEY,
-            PREF_COMMENTS_SUB_PAGE_KEY,
-            PREF_MAX_NUM_COMMENTS_PER_PAGE_KEY,
-            PREF_COMMENTS_ORDERING_METHOD_KEY
-    ));
-
     private static SettingsActivity INSTANCE;
 
-    /* Needed to validate the value provided by the user in EditTextPreference (free text)  */
+    /* Needed to validate the value provided by the user on the EditTextPreference (free text)  */
     private static final Preference.OnPreferenceChangeListener PREFERENCE_CHANGE_LISTENER =
             new Preference.OnPreferenceChangeListener() {
 
         @Override
         public boolean onPreferenceChange(Preference preference, Object newValue) {
             String key = preference.getKey();
-            if (DBG) Log.d(TAG, "onPreferenceChange Key=" + key);
+            if (VDBG) Log.d(TAG, "onPreferenceChange Key=" + key);
             /* Only EditTextPreference allows free text */
             if (preference instanceof EditTextPreference) {
                 String newPreferenceValue = newValue.toString();
@@ -175,7 +149,7 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private static void bindPreferenceToChangeListener(Preference preference) {
-        if (DBG) Log.d(TAG, "bindPreferenceToChangeListener");
+        if (VDBG) Log.d(TAG, "bindPreferenceToChangeListener");
         preference.setOnPreferenceChangeListener(PREFERENCE_CHANGE_LISTENER);
         /*
         Don't rely anymore on the default SummaryProvider. We will update the summary
